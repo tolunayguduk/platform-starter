@@ -1,0 +1,129 @@
+{
+  "realm": "platform",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "resetPasswordAllowed": true,
+
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 43200,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "permanentLockout": false,
+
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "refreshTokenMaxReuse": 0,
+  "revokeRefreshToken": true,
+
+  "roles": {
+    "realm": [
+      { "name": "ADMIN", "description": "Full administrative access" },
+      { "name": "MANAGER", "description": "Can list and approve reports" },
+      { "name": "USER", "description": "Standard end user" },
+      { "name": "AUDITOR", "description": "Read-only access to audit logs" }
+    ]
+  },
+
+  "defaultRole": {
+    "name": "default-roles-platform",
+    "composite": true,
+    "composites": {
+      "realm": ["USER"]
+    }
+  },
+
+  "clients": [
+    {
+      "clientId": "platform-app",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:8081/login/oauth2/code/*"],
+      "webOrigins": ["http://localhost:8081"],
+      "secret": "changeme-in-vault",
+      "attributes": {
+        "access.token.lifespan": "900",
+        "post.logout.redirect.uris": "http://localhost:8081/*"
+      }
+    },
+    {
+      "clientId": "platform-app-admin",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "secret": "changeme-in-vault-admin",
+      "attributes": {
+        "access.token.lifespan": "300"
+      }
+    }
+  ],
+
+  "users": [
+    {
+      "username": "service-account-platform-app-admin",
+      "enabled": true,
+      "serviceAccountClientId": "platform-app-admin",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-realm"]
+      }
+    }
+  ],
+
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": false,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_ID",
+        "clientSecret": "REPLACE_WITH_GOOGLE_OAUTH_CLIENT_SECRET",
+        "useJwksUrl": "true",
+        "syncMode": "IMPORT"
+      }
+    },
+    {
+      "alias": "github",
+      "providerId": "github",
+      "enabled": false,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_WITH_GITHUB_OAUTH_CLIENT_ID",
+        "clientSecret": "REPLACE_WITH_GITHUB_OAUTH_CLIENT_SECRET",
+        "syncMode": "IMPORT"
+      }
+    },
+    {
+      "alias": "facebook",
+      "providerId": "facebook",
+      "enabled": false,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_WITH_FACEBOOK_OAUTH_CLIENT_ID",
+        "clientSecret": "REPLACE_WITH_FACEBOOK_OAUTH_CLIENT_SECRET",
+        "syncMode": "IMPORT"
+      }
+    }
+  ]
+}

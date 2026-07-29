@@ -1,0 +1,25 @@
+.row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatarImage {
+  border-radius: 12px;
+}
+
+.editBadge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+}
+
+.fields {
+  flex: 1;
+}

@@ -1,0 +1,30 @@
+.layout {
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2%;
+  background: var(--nav-bg);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.appName {
+  text-decoration: none;
+}
+
+.appNameText {
+  font-size: 16px;
+  color: var(--nav-text);
+}
+
+.content {
+  padding: 24px 2%;
+  background: var(--content-bg);
+}
+
+.contentInner {
+  width: 100%;
+}

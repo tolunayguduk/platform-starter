@@ -1,0 +1,113 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --danger: #c0392b;
+  --accent: #aa3bff;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --danger: #f28b82;
+    --accent: #c084fc;
+  }
+}
+
+/* AppThemeProvider stamps this once React mounts, based on the picked theme color (not just OS
+   preference) - "white"/"dark" force light/dark everywhere, any other color still follows the OS.
+   These take priority over the prefers-color-scheme block above since they're the explicit,
+   in-app choice; the media query only matters for the brief pre-mount paint. */
+:root[data-theme='dark'] {
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #16171d;
+  --border: #2e303a;
+  --danger: #f28b82;
+  --accent: #c084fc;
+}
+
+:root[data-theme='light'] {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --danger: #c0392b;
+  --accent: #aa3bff;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+/* Scoped to .page (Login/Register only) - these used to be bare element selectors (form, label,
+   input, button), which also matched Ant Design's own <label>/<button> elements everywhere else
+   in the app once antd-based pages existed. That broke antd's required-field asterisk layout
+   (it renders inline via ::before, but our global `label { flex-direction: column }` stacked it
+   above the text instead) among other things. */
+.page form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.page label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.page input[type='text'],
+.page input[type='email'],
+.page input[type='password'] {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.page button {
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.page button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.page {
+  max-width: 480px;
+  margin: 40px auto;
+  padding: 0 16px;
+}

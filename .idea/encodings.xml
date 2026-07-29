@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/module-user/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/module-user/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-audit-spring-boot-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-audit-spring-boot-starter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-audit-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-bom/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-bom/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-cache-spring-boot-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-cache-spring-boot-starter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-cache-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-error-spring-boot-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-error-spring-boot-starter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-error-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-observability-spring-boot-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-observability-spring-boot-starter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-observability-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-security-spring-boot-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-security-spring-boot-starter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/platform-security-starter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>

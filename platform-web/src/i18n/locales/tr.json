@@ -1,0 +1,133 @@
+{
+  "nav": {
+    "appName": "Platform Starter",
+    "profile": "Profil",
+    "settings": "Ayarlar",
+    "admin": "Admin Paneli",
+    "logout": "Çıkış Yap"
+  },
+  "login": {
+    "title": "Giriş Yap",
+    "username": "Kullanıcı Adı",
+    "password": "Şifre",
+    "submit": "Giriş Yap",
+    "noAccount": "Hesabınız yok mu?",
+    "register": "Kayıt Ol",
+    "errorInvalidCredentials": "Kullanıcı adı veya şifre hatalı.",
+    "errorUnexpected": "Beklenmeyen bir hata oluştu."
+  },
+  "register": {
+    "title": "Kayıt Ol",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "username": "Kullanıcı Adı",
+    "email": "E-posta",
+    "password": "Şifre",
+    "confirmPassword": "Şifre (Tekrar)",
+    "termsAccepted": "Kullanım şartlarını kabul ediyorum",
+    "submit": "Kayıt Ol",
+    "errorFailed": "Kayıt başarısız.",
+    "errorUnexpected": "Beklenmeyen bir hata oluştu."
+  },
+  "dashboard": {
+    "welcome": "Hoş geldin, {{name}}",
+    "accountInfo": "Hesap Bilgileri",
+    "username": "Kullanıcı adı",
+    "email": "E-posta",
+    "fullName": "Ad Soyad",
+    "actions": "İşlemler",
+    "listReports": "Raporları Listele",
+    "approveReport": "Raporu Onayla",
+    "refund": "İade Et"
+  },
+  "profile": {
+    "title": "Profil",
+    "identitySection": "Kişisel Bilgiler",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "email": "E-posta",
+    "username": "Kullanıcı Adı",
+    "birthDate": "Doğum Tarihi",
+    "avatarUrl": "Profil Fotoğrafı URL",
+    "locale": "Dil Tercihi",
+    "contactSection": "İletişim Bilgileri",
+    "phoneNumber": "Telefon Numarası",
+    "alternateEmail": "Alternatif E-posta",
+    "addressLine": "Adres",
+    "city": "Şehir",
+    "country": "Ülke",
+    "save": "Kaydet",
+    "saveSuccess": "Profil başarıyla güncellendi.",
+    "saveError": "Profil güncellenemedi.",
+    "consentSection": "Onay Geçmişi",
+    "consentType": "Onay Türü",
+    "legalBasis": "Hukuki Dayanak",
+    "purpose": "Amaç",
+    "grantedAt": "Onay Tarihi",
+    "revokedAt": "İptal Tarihi",
+    "noConsents": "Henüz kayıtlı bir onay yok.",
+    "passwordSection": "Şifre Değiştir",
+    "currentPassword": "Mevcut Şifre",
+    "newPassword": "Yeni Şifre",
+    "confirmNewPassword": "Yeni Şifre (Tekrar)",
+    "changePassword": "Şifreyi Güncelle",
+    "passwordSuccess": "Şifre başarıyla güncellendi.",
+    "passwordError": "Şifre güncellenemedi."
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "comingSoon": "Bu bölüm yakında burada olacak.",
+    "categories": {
+      "theme": "Tema",
+      "language": "Dil",
+      "account": "Hesap",
+      "notifications": "Bildirimler",
+      "security": "Güvenlik",
+      "billing": "Faturalandırma"
+    },
+    "theme": {
+      "description": "Uygulama genelinde kullanılacak vurgu rengini seçin.",
+      "colors": {
+        "purple": "Mor",
+        "blue": "Mavi",
+        "green": "Yeşil",
+        "orange": "Turuncu",
+        "rose": "Gül Kurusu",
+        "dark": "Koyu",
+        "white": "Beyaz"
+      }
+    },
+    "language": {
+      "description": "Uygulama dilini seçin.",
+      "tr": "Türkçe",
+      "en": "İngilizce"
+    }
+  },
+  "admin": {
+    "title": "Admin Paneli",
+    "registrationsTitle": "Kayıt Olan Kullanıcılar",
+    "registrationsTotalFor": "{{period}} içinde toplam kayıt",
+    "range": {
+      "day": "1 Gün",
+      "week": "1 Hafta",
+      "month": "1 Ay",
+      "year": "1 Yıl"
+    },
+    "usersTitle": "Kullanıcılar",
+    "you": "siz",
+    "rolesUpdated": "Roller güncellendi.",
+    "rolesUpdateError": "Roller güncellenemedi.",
+    "column": {
+      "username": "Kullanıcı Adı",
+      "fullName": "Ad Soyad",
+      "email": "E-posta",
+      "status": "Durum",
+      "createdAt": "Kayıt Tarihi",
+      "roles": "Roller"
+    }
+  },
+  "notFound": {
+    "subtitle": "Aradığınız sayfa bulunamadı.",
+    "backHome": "Anasayfaya Dön"
+  }
+}

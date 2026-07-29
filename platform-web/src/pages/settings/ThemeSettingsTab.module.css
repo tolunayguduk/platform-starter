@@ -1,0 +1,20 @@
+.swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--swatch-color);
+  /* a fixed, neutral border keeps the white/dark swatches visible against any page
+     background - the colored outline is only the selection indicator */
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  outline: 2px solid var(--outline-color);
+  outline-offset: 3px;
+}
+
+.checkIcon {
+  color: var(--check-color);
+}

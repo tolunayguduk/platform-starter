@@ -1,0 +1,17 @@
+.trigger {
+  cursor: pointer;
+}
+
+.avatar {
+  background: var(--nav-overlay);
+  color: var(--nav-text);
+}
+
+.username {
+  color: var(--nav-text);
+}
+
+.chevron {
+  font-size: 11px;
+  color: var(--nav-text);
+}

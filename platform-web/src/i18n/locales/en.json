@@ -1,0 +1,133 @@
+{
+  "nav": {
+    "appName": "Platform Starter",
+    "profile": "Profile",
+    "settings": "Settings",
+    "admin": "Admin Panel",
+    "logout": "Log Out"
+  },
+  "login": {
+    "title": "Log In",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Log In",
+    "noAccount": "Don't have an account?",
+    "register": "Sign Up",
+    "errorInvalidCredentials": "Incorrect username or password.",
+    "errorUnexpected": "An unexpected error occurred."
+  },
+  "register": {
+    "title": "Sign Up",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "termsAccepted": "I accept the terms of service",
+    "submit": "Sign Up",
+    "errorFailed": "Registration failed.",
+    "errorUnexpected": "An unexpected error occurred."
+  },
+  "dashboard": {
+    "welcome": "Welcome, {{name}}",
+    "accountInfo": "Account Info",
+    "username": "Username",
+    "email": "Email",
+    "fullName": "Full Name",
+    "actions": "Actions",
+    "listReports": "List Reports",
+    "approveReport": "Approve Report",
+    "refund": "Issue Refund"
+  },
+  "profile": {
+    "title": "Profile",
+    "identitySection": "Personal Info",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "username": "Username",
+    "birthDate": "Date of Birth",
+    "avatarUrl": "Avatar URL",
+    "locale": "Language Preference",
+    "contactSection": "Contact Info",
+    "phoneNumber": "Phone Number",
+    "alternateEmail": "Alternate Email",
+    "addressLine": "Address",
+    "city": "City",
+    "country": "Country",
+    "save": "Save",
+    "saveSuccess": "Profile updated successfully.",
+    "saveError": "Failed to update profile.",
+    "consentSection": "Consent History",
+    "consentType": "Consent Type",
+    "legalBasis": "Legal Basis",
+    "purpose": "Purpose",
+    "grantedAt": "Granted At",
+    "revokedAt": "Revoked At",
+    "noConsents": "No consents recorded yet.",
+    "passwordSection": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "changePassword": "Update Password",
+    "passwordSuccess": "Password updated successfully.",
+    "passwordError": "Failed to update password."
+  },
+  "settings": {
+    "title": "Settings",
+    "comingSoon": "This section will be here soon.",
+    "categories": {
+      "theme": "Theme",
+      "language": "Language",
+      "account": "Account",
+      "notifications": "Notifications",
+      "security": "Security",
+      "billing": "Billing"
+    },
+    "theme": {
+      "description": "Choose the accent color used throughout the app.",
+      "colors": {
+        "purple": "Purple",
+        "blue": "Blue",
+        "green": "Green",
+        "orange": "Orange",
+        "rose": "Rose",
+        "dark": "Dark",
+        "white": "White"
+      }
+    },
+    "language": {
+      "description": "Choose the application language.",
+      "tr": "Turkish",
+      "en": "English"
+    }
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "registrationsTitle": "User Registrations",
+    "registrationsTotalFor": "Total registrations in the last {{period}}",
+    "range": {
+      "day": "1 Day",
+      "week": "1 Week",
+      "month": "1 Month",
+      "year": "1 Year"
+    },
+    "usersTitle": "Users",
+    "you": "you",
+    "rolesUpdated": "Roles updated.",
+    "rolesUpdateError": "Failed to update roles.",
+    "column": {
+      "username": "Username",
+      "fullName": "Full Name",
+      "email": "Email",
+      "status": "Status",
+      "createdAt": "Registered At",
+      "roles": "Roles"
+    }
+  },
+  "notFound": {
+    "subtitle": "Sorry, the page you visited does not exist.",
+    "backHome": "Back to Home"
+  }
+}
