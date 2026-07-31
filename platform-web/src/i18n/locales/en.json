@@ -124,6 +124,21 @@
       "status": "Status",
       "createdAt": "Registered At",
       "roles": "Roles"
+    },
+    "databaseTablesTitle": "Database Tables",
+    "databaseTablesHint": "Click a row to expand it and see that record's audit (change) history.",
+    "tables": {
+      "userProfile": "User Profiles",
+      "userContact": "Contact Info",
+      "userConsent": "Consents",
+      "permission": "Permissions",
+      "rolePermission": "Role-Permission Matrix"
+    },
+    "auditRevType": {
+      "added": "Added",
+      "modified": "Modified",
+      "deleted": "Deleted",
+      "unknown": "Unknown"
     }
   },
   "notFound": {

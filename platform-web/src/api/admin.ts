@@ -32,3 +32,31 @@ export interface RegistrationStatsPoint {
 export function fetchRegistrationStats(accessToken: string, range: StatsRange): Promise<RegistrationStatsPoint[]> {
   return apiFetch<RegistrationStatsPoint[]>(`/api/admin/stats/registrations?range=${range}`, { accessToken });
 }
+
+export interface AdminTable {
+  key: string;
+  hasAudit: boolean;
+}
+
+export interface AdminTableRows {
+  columns: string[];
+  primaryKeyColumn: string;
+  rows: Record<string, unknown>[];
+}
+
+export interface AdminAuditRows {
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
+export function fetchAdminTables(accessToken: string): Promise<AdminTable[]> {
+  return apiFetch<AdminTable[]>('/api/admin/tables', { accessToken });
+}
+
+export function fetchAdminTableRows(accessToken: string, key: string): Promise<AdminTableRows> {
+  return apiFetch<AdminTableRows>(`/api/admin/tables/${key}/rows`, { accessToken });
+}
+
+export function fetchAdminTableAuditRows(accessToken: string, key: string, pk: string): Promise<AdminAuditRows> {
+  return apiFetch<AdminAuditRows>(`/api/admin/tables/${key}/rows/${encodeURIComponent(pk)}/audit`, { accessToken });
+}

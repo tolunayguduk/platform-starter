@@ -1,7 +1,8 @@
 import { Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { RegistrationStatsChart } from './admin/RegistrationStatsChart';
+import { RegistrationStatsCards } from './admin/RegistrationStatsCards';
 import { UsersTable } from './admin/UsersTable';
+import { DatabaseTablesBrowser } from './admin/DatabaseTablesBrowser';
 import styles from './AdminPage.module.css';
 
 export function AdminPage() {
@@ -13,8 +14,9 @@ export function AdminPage() {
         {t('admin.title')}
       </Typography.Title>
 
-      <RegistrationStatsChart />
+      <RegistrationStatsCards />
       <UsersTable />
+      <DatabaseTablesBrowser />
     </div>
   );
 }

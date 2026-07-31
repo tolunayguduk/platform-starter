@@ -124,6 +124,21 @@
       "status": "Durum",
       "createdAt": "Kayıt Tarihi",
       "roles": "Roller"
+    },
+    "databaseTablesTitle": "Veritabanı Tabloları",
+    "databaseTablesHint": "Bir satıra tıklayıp genişleterek o kaydın audit (değişiklik) geçmişini görebilirsiniz.",
+    "tables": {
+      "userProfile": "Kullanıcı Profilleri",
+      "userContact": "İletişim Bilgileri",
+      "userConsent": "Onaylar",
+      "permission": "İzinler",
+      "rolePermission": "Rol-İzin Matrisi"
+    },
+    "auditRevType": {
+      "added": "Eklendi",
+      "modified": "Güncellendi",
+      "deleted": "Silindi",
+      "unknown": "Bilinmiyor"
     }
   },
   "notFound": {
