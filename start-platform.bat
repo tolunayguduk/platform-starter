@@ -200,11 +200,13 @@ if /i "%~1"=="observability" (
 echo.
 echo  Durdurmak icin: Backend/Frontend pencerelerinde Ctrl+C, sonra "docker compose down"
 echo ============================================================
+pause
 goto :END
 
 :FAIL
 echo.
 echo Kurulum tamamlanamadi, yukaridaki hatayi giderip tekrar calistirin.
+pause
 exit /b 1
 
 :END
