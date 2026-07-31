@@ -1,7 +1,7 @@
 package com.platform.audit;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 
 /**
  * Envers itself needs no explicit @Bean wiring beyond being on the classpath and the

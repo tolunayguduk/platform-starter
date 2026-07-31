@@ -22,7 +22,10 @@ docker compose --profile observability up -d
 docker compose ps
 
 # 4) Veritabanı şemasını oluştur (Flyway migration'ları)
-mvn -pl module-user flyway:migrate
+#    process-resources önce çalışmalı: flyway:migrate migration dosyalarını target/classes'tan
+#    (classpath) okur, doğrudan goal çağrısı bunu otomatik kopyalamaz - atlarsanız "No migrations
+#    found" uyarısıyla hiçbir tablo oluşturulmadan sessizce geçer.
+mvn -pl module-user process-resources flyway:migrate
 
 # 5) Vault dev sunucusuna DB şifresini yükle
 #    Token, VAULT_DEV_ROOT_TOKEN_ID ile aynı olmalı (.env yoksa varsayılan: "root")
@@ -171,6 +174,114 @@ ve `/api/me`, `/api/me/ui-permissions` gibi JSON endpoint'leri sunan bir REST AP
 `platform-web/` altındaki ayrı React uygulamasında yaşıyor; ikisi arasındaki tek bağ HTTP + Bearer
 token (bkz. "Permission-aware UI" satırı).
 
+## Katmanlı paket yapısı
+
+`module-user`, `platform-app`'in controller'ları ve `platform-security-starter`'daki Keycloak
+entegrasyon sınıfları (`integration/keycloak`) **feature-by-package değil, layer-by-package**
+düzenlenir:
+
+```
+entity/           @Entity sınıfları - hiç logic yok
+repository/        Spring Data JPA interface'leri
+constant/          enum'lar (uygulama genelinde kullanılan sabitler)
+controller/
+  model/           Controller'ın DTO'ları (HTTP request/response body'leri)
+  XxxController          interface - Spring MVC anotasyonları burada (@RequestMapping,
+                          @GetMapping, @RequestBody, @PathVariable, @AuthenticationPrincipal...)
+  XxxControllerImpl      @RestController, interface'i implemente eder, logic içermez
+service/
+  model/           Service'in Entity'den farklı ihtiyaç duyduğu request/response modelleri
+  XxxService             interface
+  XxxServiceImpl         @Service, gerçek iş mantığı burada
+mapper/            MapStruct interface'leri (@Mapper(componentModel = "spring")) - katmanlar
+                   arası model dönüşümü (Controller DTO ↔ Service model ↔ Entity)
+integration/       harici sistemlere (Keycloak gibi) entegrasyon - sıfır logic, sadece API çağrısı
+  <sistem>/model/        o sistemin kendi request/response modelleri
+  XxxClient              interface
+  XxxClientImpl          zero-logic implementasyon
+util/              saf statik yardımcı sınıflar (örn. KeycloakRoleMapper)
+```
+
+Kurallar:
+- Her Service/Integration/Controller sınıfı bir `Xxx` arayüzünden türer, implementasyonu `XxxImpl`
+  adını taşır. Repository ve Mapper bunun dışında — onları sırasıyla Spring Data JPA ve MapStruct
+  kendisi üretir.
+- Controller'da logic olmaz; validasyon/hesaplama mantığı Service'e taşınır.
+- Bir katman bir alt katmanı çağırırken, alt katmanın kendi request/response modelini (varsa
+  Mapper ile, basit primitive parametrelerde doğrudan) kendisi hazırlar.
+
+MapStruct'ın annotation processor'ı `mvn`'in klasik classpath taramasıyla otomatik devreye
+girmiyor — `module-user`, `platform-app` ve gelecekte mapper ekleyecek her modülün
+`maven-compiler-plugin` konfigürasyonunda `annotationProcessorPaths` açıkça tanımlı olmalı
+(mevcut pom'lara bakın).
+
+Diğer `platform-*-starter` kütüphaneleri (error/cache/observability/audit) saf auto-configuration
+kütüphaneleri olduğu için (controller/entity yok) bu yapıya zorlanmadı.
+
+## Veri şeması: hangi veri nerede tutuluyor
+
+Dört ayrı depo var, her biri farklı bir sorumluluk taşıyor. **Kural: Keycloak kimlik ve rol
+yönetiminin TEK doğruluk kaynağıdır — MySQL'de artık ne bir kimlik cache'i (`user_core`), ne de
+bir rol tablosu var.** username/email/ad-soyad her zaman canlı olarak Keycloak'tan okunur/yazılır
+(`KeycloakAdminClient`); kullanıcı↔rol ataması da sadece Keycloak'ta tutulur ve JWT'nin
+`realm_access.roles` claim'inden ya da Admin API'den okunur. Uygulamanın kendi kodunda tek bir
+statik rol adı bile yok — admin panelinin düzenleyebileceği rol listesi
+(`KeycloakAdminClient.listRealmRoles()`) her seferinde doğrudan Keycloak realm'inden çekilir.
+
+### 1) Keycloak (realm: `platform`) — kimlik + rol yönetimi, tek doğruluk kaynağı
+
+| Veri | Nerede | Not |
+|---|---|---|
+| `username`, `email`, `firstName`, `lastName`, `enabled`, `createdTimestamp` | Keycloak user kaydı | `KeycloakAdminClient` üzerinden okunur/yazılır — MySQL'de hiçbir kopyası yok |
+| Şifre (hash) | Keycloak credential store | Uygulama koduna **hiçbir zaman** ulaşmaz — `KeycloakTokenClient` şifreyi Keycloak'a iletir, hiçbir yerde saklamaz |
+| `sub` (Keycloak user id) | Keycloak user id (UUID) | Uygulamadaki TEK kullanıcı tanımlayıcısı — `user_profile`/`user_contact`/`user_consent`'in PK/FK'si bu id, gerçek bir foreign key değil (Keycloak dışarıda) |
+| Realm rolleri: `ADMIN`, `MANAGER`, `USER`, `AUDITOR`, ... | Keycloak realm role tanımları + JWT `realm_access.roles` claim'i | **Rol tanımı ve kullanıcı-rol ataması sadece burada var** — `KeycloakRoleMapper.isApplicationRole` JWT'den okurken Keycloak'ın kendi bookkeeping rollerini (`offline_access`, `default-roles-*`) eler; admin panelinin rol listesi `KeycloakAdminClient.listRealmRoles()` ile aynı realm'den canlı çekilir |
+| SSO session / refresh token durumu | Keycloak'ın kendi internal veritabanı | Uygulamanın hiçbir tablosunda karşılığı yok |
+| Sosyal login federasyonu (Google/GitHub/Facebook) | Keycloak identity provider config | `docker/keycloak/realm-platform.json` → `identityProviders` (şu an `enabled: false`) |
+
+### 2) MySQL (`platform` veritabanı) — sadece bu uygulamanın sahip olduğu veri: GDPR kategorileri, yetki matrisi, audit
+
+Kimlik için ayrı bir tablo **yok** — `user_core` kaldırıldı (V10 migration). Aşağıdaki tablolar
+kullanıcıyı doğrudan Keycloak'ın `sub` id'siyle (`keycloak_user_id` kolonu) referanslar.
+
+**GDPR kategorileri** — her biri ayrı tabloda, birbirinden bağımsız export/silinebilsin diye:
+
+| Tablo | Kolonlar | Kategori |
+|---|---|---|
+| `user_profile` | `keycloak_user_id` (PK), `full_name`, `birth_date`, `avatar_url`, `locale`, `deleted_at` | Temel profil — `deleted_at` right-to-erasure soft-delete alanı |
+| `user_contact` | `keycloak_user_id` (PK), `phone_number`, `alternate_email`, `address_line`, `city`, `country` | İletişim bilgisi |
+| `user_consent` | `id`, `keycloak_user_id`, `consent_type`, `legal_basis`, `purpose`, `granted_at`, `revoked_at`, `ip_address` | Onay kayıtları (GDPR Art. 6 legal basis) — hangi verinin hangi gerekçeyle toplandığının kanıtı |
+
+**Yetki matrisi** — rol↔izin ilişkisi (kullanıcı↔rol değil, o sadece Keycloak'ta):
+
+| Tablo | Kolonlar | Not |
+|---|---|---|
+| `permission` | `id`, `key` (`resource:action` formatı), `ui_policy` (`HIDE_IF_DENIED` / `DISABLE_IF_DENIED`) | Güvenlik sınırı değil, UI davranış ipucu |
+| `role_permission` | `id`, `role_name`, `permission_id`, `access_level` (`GRANTED` / `VISIBLE_DENIED`) | `role_name` artık lokal bir tabloya değil, doğrudan Keycloak realm rol ismine karşılık gelir — ayrı bir `role` tablosu yok. Gerçek yetki kontrolü (`MatrixPermissionEvaluator`) sadece `GRANTED` satırlarına bakar |
+
+**Audit / tamper-evidence** — `platform-audit-starter` (Hibernate Envers) tarafından otomatik yönetilir:
+
+| Tablo | Kolonlar | Not |
+|---|---|---|
+| `platform_rev_info` | `id`, `timestamp`, `username`, `client_ip`, `trace_id`, `record_hash`, `previous_hash` | Her değişiklik revizyonu — kim, nereden, ne zaman + zincir hash (DB'de doğrudan satır değiştirmeyi tespit eder) |
+| `user_profile_aud`, `user_contact_aud`, `user_consent_aud`, `role_permission_aud` | İlgili tablonun tüm kolonları + `rev`, `revtype` (0=ADD/1=MOD/2=DEL) | `@Audited` işaretli her entity'nin tam geçmişi — kim ne zaman neyi değiştirdi |
+
+### 3) Redis — sadece türetilmiş veri (cache), hiç kişisel veri yok
+
+| Cache adı | İçerik | TTL |
+|---|---|---|
+| `role-permissions` | Rol adı → `GRANTED` izin listesi (`RolePermissionLookupService`) | 300s (`application.yml` → `platform.cache.ttls`) |
+| `role-permissions-visible-denied` | Rol adı → `VISIBLE_DENIED` izin listesi | `default-ttl` 120s |
+
+`role_permission` tablosu değiştiğinde (`RolePermissionLookupService`) her iki cache de `@CacheEvict(allEntries = true)` ile tamamen temizlenir.
+
+### 4) Vault — sır (secret) yönetimi, kullanıcı verisi değil
+
+`DB_PASSWORD`, `KEYCLOAK_CLIENT_SECRET`, `KEYCLOAK_ADMIN_CLIENT_SECRET` gibi bağlantı sırları
+`secret/platform-app` altında tutulur (`spring.config.import: vault://`). Bu bir kullanıcı/iş
+verisi deposu değil, sadece uygulamanın diğer depolara bağlanmak için kullandığı kimlik
+bilgilerinin merkezi saklama yeri.
+
 ## Konuşulan kararların kod karşılığı
 
 | Karar | Nerede |
@@ -178,8 +289,8 @@ token (bkz. "Permission-aware UI" satırı).
 | Modüler/izole yapı, micro-ready | `platform-*` starter'lar + `module-user` ayrımı |
 | OAuth2 (Google/GitHub/Facebook) + Keycloak altyapısı | `platform-security-starter` — `issuer-uri` tek değişen satır |
 | Config-driven her şey | `application.yml` (`platform.cache.ttls.*` gibi), DB-driven `role_permission` matrisi |
-| GDPR kategorize user data | `module-user/.../profile/*` (UserCore, UserProfile, UserContact, UserConsent - ayrı tablolar) |
-| Rol/yetki matrisi, DB'den yönetilebilir | `module-user/.../authz/*` (`Role`, `Permission`, `RolePermission`) |
+| GDPR kategorize user data | `module-user/.../entity/{UserProfile,UserContact,UserConsent}` - ayrı tablolar, kimlik Keycloak'ta |
+| Yetki matrisi, DB'den yönetilebilir; roller Keycloak'ta | `module-user/.../entity/{Permission,RolePermission}` (`RolePermission.roleName` → Keycloak realm rolü) |
 | Permission-aware UI (hide/disable/enable) | `UiPermissionsController` (`/api/me/ui-permissions`) + `platform-web/src/components/PermissionButton.tsx` |
 | Envers + tamper-evident audit | `platform-audit-starter` (`PlatformRevisionListener` - hash chain) |
 | Finans-grade hata yönetimi | `platform-error-starter` (Business/Technical/Security exception ayrımı) |
@@ -187,6 +298,7 @@ token (bkz. "Permission-aware UI" satırı).
 | Health check (liveness/readiness) | `application.yml` → `management.endpoint.health.probes.enabled=true` |
 | Vault ile secret yönetimi | `application.yml` → `spring.config.import: vault://`, `docker-compose.yml` → `vault` servisi |
 | Maven | Tüm proje Maven multi-module |
+| Katmanlı paket yapısı, MapStruct ile model dönüşümü | `module-user`, `platform-app`, `platform-security-starter/integration` — bkz. "Katmanlı paket yapısı" bölümü |
 
 ## Bilinçli olarak eksik bırakılanlar (sıradaki adımlar)
 
@@ -194,9 +306,6 @@ token (bkz. "Permission-aware UI" satırı).
   olarak eklendi (`enabled: false`, placeholder client-id/secret ile) — Google/GitHub/Facebook
   Developer Console'larından gerçek OAuth uygulaması oluşturup `REPLACE_WITH_*` alanlarını
   doldurduktan sonra `enabled: true` yapman yeterli, başka bir şey değişmiyor.
-- **Diğer `_AUD` tabloları**: `V4__envers_audit_tables.sql` içinde sadece `user_core_AUD`
-  örnek olarak yazıldı; `user_profile_AUD`, `user_contact_AUD`, `role_permission_AUD` aynı
-  pattern'le eklenmeli.
 - **Idempotency key altyapısı, maker-checker pattern, outbox pattern**: henüz kod yok,
   ilk `payment`/işlem modülü yazılırken `platform-error` ve `platform-audit` üzerine inşa edilecek.
 - **Rate limiting (Bucket4j), field-level encryption, TDE**: henüz eklenmedi.
@@ -210,7 +319,11 @@ token (bkz. "Permission-aware UI" satırı).
 ## Yeni bir modül eklemek
 
 1. `module-<isim>` adında yeni bir Maven modülü aç, `platform-parent`'a `<parent>` yap
-2. İhtiyaç duyduğu `platform-*` starter'ları dependency olarak ekle
-3. Entity'lerini `@Audited` işaretle (otomatik olarak Envers'e dahil olur)
-4. Kritik endpoint'lerini `@PreAuthorize("hasPermission('<resource>', '<action>')")` ile koru
-5. `platform-app/pom.xml`'e yeni modülü dependency olarak ekle
+2. İhtiyaç duyduğu `platform-*` starter'ları dependency olarak ekle; MapStruct kullanacaksan
+   `mapstruct`/`mapstruct-processor` dependency'lerini ve `annotationProcessorPaths` konfigürasyonunu
+   da ekle (yukarıdaki "Katmanlı paket yapısı" bölümündeki not)
+3. Yukarıdaki "Katmanlı paket yapısı"nı izle: `entity/repository/constant/controller(+model)/
+   service(+model)/mapper`
+4. Entity'lerini `@Audited` işaretle (otomatik olarak Envers'e dahil olur)
+5. Kritik endpoint'lerini `@PreAuthorize("hasPermission('<resource>', '<action>')")` ile koru
+6. `platform-app/pom.xml`'e yeni modülü dependency olarak ekle

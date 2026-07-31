@@ -17,13 +17,24 @@
 
     <properties>
         <mapstruct.version>1.6.2</mapstruct.version>
-        <spring-cloud-vault.version>4.1.4</spring-cloud-vault.version>
+        <spring-cloud.version>2025.1.2</spring-cloud.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <springdoc.version>2.6.0</springdoc.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Cloud's own BOM manages spring-cloud-starter-vault-config's version
+                 (and every other spring-cloud-* artifact) consistently with this Spring Boot line -
+                 see https://github.com/spring-cloud/spring-cloud-release/wiki/Supported-Versions -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <dependency>
                 <groupId>com.platform</groupId>
                 <artifactId>platform-error-starter</artifactId>
@@ -61,9 +72,9 @@
                 <version>${mapstruct.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-starter-vault-config</artifactId>
-                <version>${spring-cloud-vault.version}</version>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.github.resilience4j</groupId>

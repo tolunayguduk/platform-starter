@@ -133,8 +133,17 @@ goto :WAIT_VAULT
 echo   Vault hazir.
 
 REM --- 4) Veritabani semasi (Flyway) ---
+REM     flyway:migrate migration dosyalarini target/classes/db/migration'dan (classpath) okur;
+REM     dogrudan goal cagrisi process-resources fazini otomatik calistirmaz, o yuzden migration'lar
+REM     src/main/resources'tan target/classes'a once kopyalanmali - yoksa "No migrations found"
+REM     uyarisiyla sessizce hicbir tablo olusturulmaz.
 echo.
 echo [3/6] Flyway migration'lari calistiriliyor (kullanici: !DB_USERNAME!^)...
+call mvn -q -pl module-user process-resources
+if errorlevel 1 (
+    echo [HATA] Kaynaklar hazirlanamadi.
+    goto :FAIL
+)
 call mvn -q -pl module-user flyway:migrate "-Dflyway.user=!DB_USERNAME!" "-Dflyway.password=!DB_PASSWORD!"
 if errorlevel 1 (
     echo [HATA] Flyway migration basarisiz. MySQL kullanici/sifresi ".env" ile uyusuyor mu kontrol edin.

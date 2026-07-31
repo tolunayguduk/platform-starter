@@ -51,10 +51,32 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPathsUseDepMgmt>true</annotationProcessorPathsUseDepMgmt>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <!--
                 Lets you run migrations WITHOUT booting the whole Spring Boot app
                 (which would also need Keycloak/Redis up). Local dev defaults point at the
@@ -67,7 +89,7 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>10.17.3</version>
+                <version>12.4.0</version>
                 <configuration>
                     <url>${flyway.url}</url>
                     <user>${flyway.user}</user>
@@ -77,15 +99,19 @@
                     </locations>
                 </configuration>
                 <dependencies>
+                    <!-- Must match Spring Boot's own managed flyway-core/mysql-connector-j versions -
+                         mixing flyway-core generations on the plugin's classloader throws
+                         IncompatibleClassChangeError (FlywayTelemetryManager changed class->interface
+                         between 10.x and 12.x). -->
                     <dependency>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-mysql</artifactId>
-                        <version>10.17.3</version>
+                        <version>12.4.0</version>
                     </dependency>
                     <dependency>
                         <groupId>com.mysql</groupId>
                         <artifactId>mysql-connector-j</artifactId>
-                        <version>9.0.0</version>
+                        <version>9.7.0</version>
                     </dependency>
                 </dependencies>
             </plugin>

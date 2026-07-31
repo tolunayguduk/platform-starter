@@ -44,6 +44,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Spring Boot 4.1 split RestClient.Builder auto-configuration out of spring-boot-autoconfigure
+             into its own starter (KeycloakAdminClient/KeycloakTokenClient both inject RestClient.Builder) -
+             see https://github.com/spring-projects/spring-boot/issues/50768 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
