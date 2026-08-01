@@ -11,6 +11,8 @@ import com.platform.security.integration.keycloak.model.RealmRole;
 import com.platform.security.integration.keycloak.model.ResetPasswordRequest;
 import com.platform.security.integration.keycloak.model.UpdateKeycloakUserRequest;
 import com.platform.security.util.KeycloakRoleMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
@@ -23,7 +25,19 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Every method here is wrapped in the "keycloakAdmin" circuit breaker (see application.yml) - the
+ * app depends on Keycloak being reachable for nearly everything, so a slow/unreachable Keycloak
+ * should fail fast (CallNotPermittedException, mapped to a 500 by GlobalExceptionHandler's
+ * catch-all) once it's clearly down, instead of every caller hanging on its own timeout.
+ * "keycloakAdmin" retry is scoped (see application.yml's retry-exceptions) to only
+ * ResourceAccessException - i.e. connection-level failures (timeout, refused, DNS) where no
+ * response was ever received. It never retries a definite HTTP response, including the 4xx
+ * statuses this class maps to BusinessException/TechnicalException below - those aren't transient.
+ */
 public class KeycloakAdminClientImpl implements KeycloakAdminClient {
+
+    private static final String CB_NAME = "keycloakAdmin";
 
     /** Client-credentials grant has no real end user; this is just a stable cache key for OAuth2AuthorizedClientService. */
     private static final String PRINCIPAL_NAME = "keycloak-admin-client";
@@ -57,6 +71,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public String createUser(CreateKeycloakUserRequest request) {
         Map<String, Object> body = Map.of(
                 "username", request.username(),
@@ -95,16 +111,22 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void deleteUser(String keycloakUserId) {
         restClient.delete().uri("/users/{id}", keycloakUserId).retrieve().toBodilessEntity();
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public KeycloakUser getUser(String keycloakUserId) {
         return restClient.get().uri("/users/{id}", keycloakUserId).retrieve().body(KeycloakUser.class);
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void updateUser(String keycloakUserId, UpdateKeycloakUserRequest request) {
         Map<String, Object> body = Map.of("email", request.email(), "firstName", request.firstName(), "lastName", request.lastName());
         restClient.put().uri("/users/{id}", keycloakUserId)
@@ -122,6 +144,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void updateUserIdentity(String keycloakUserId, String username, String email) {
         Map<String, Object> body = Map.of("username", username, "email", email);
         restClient.put().uri("/users/{id}", keycloakUserId)
@@ -139,6 +163,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void setUserEnabled(String keycloakUserId, boolean enabled) {
         restClient.put().uri("/users/{id}", keycloakUserId)
                 .body(Map.of("enabled", enabled))
@@ -151,6 +177,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void resetPassword(String keycloakUserId, ResetPasswordRequest request) {
         Map<String, Object> body = Map.of("type", "password", "value", request.newPassword(), "temporary", false);
         restClient.put().uri("/users/{id}/reset-password", keycloakUserId)
@@ -164,6 +192,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void assignRealmRole(String keycloakUserId, String roleName) {
         RealmRole role = restClient.get().uri("/roles/{roleName}", roleName).retrieve().body(RealmRole.class);
         restClient.post().uri("/users/{id}/role-mappings/realm", keycloakUserId)
@@ -177,6 +207,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void removeRealmRole(String keycloakUserId, String roleName) {
         RealmRole role = restClient.get().uri("/roles/{roleName}", roleName).retrieve().body(RealmRole.class);
         restClient.method(HttpMethod.DELETE).uri("/users/{id}/role-mappings/realm", keycloakUserId)
@@ -190,6 +222,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<String> getUserIdsWithRole(String roleName) {
         List<KeycloakUserId> users = restClient.get().uri("/roles/{roleName}/users", roleName)
                 .retrieve()
@@ -199,6 +233,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<KeycloakUserSummary> listUsers() {
         List<KeycloakUserSummary> users = restClient.get().uri("/users?max={max}", MAX_USERS_PAGE_SIZE)
                 .retrieve()
@@ -208,11 +244,15 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<String> listRealmRoles() {
         return listRealmRolesDetailed().stream().map(RealmRole::name).toList();
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<RealmRole> listRealmRolesDetailed() {
         List<RealmRole> roles = restClient.get().uri("/roles")
                 .retrieve()
@@ -227,6 +267,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void updateRealmRoleDescription(String roleName, String description) {
         restClient.put().uri("/roles/{roleName}", roleName)
                 .body(Map.of("name", roleName, "description", description == null ? "" : description))
@@ -239,6 +281,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void createRealmRole(String roleName) {
         restClient.post().uri("/roles")
                 .body(Map.of("name", roleName))
@@ -255,6 +299,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public void deleteRealmRole(String roleName) {
         restClient.delete().uri("/roles/{roleName}", roleName)
                 .retrieve()
@@ -266,6 +312,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<AdminEvent> getUserAdminEvents(String keycloakUserId) {
         List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
                 .retrieve()
@@ -282,6 +330,8 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<AdminEvent> getRecentAdminEvents(int limit) {
         List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
                 .retrieve()

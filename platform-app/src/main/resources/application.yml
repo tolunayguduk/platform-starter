@@ -68,6 +68,14 @@ spring:
     virtual:
       enabled: true
 
+  # Applies to every RestClient.Builder-based client in the app (KeycloakAdminClient,
+  # KeycloakTokenClient) - without this, a hung Keycloak leaves calling threads blocked
+  # indefinitely instead of failing fast into the circuit breaker below.
+  http:
+    client:
+      connect-timeout: 3s
+      read-timeout: 5s
+
 server:
   port: 8081
 
@@ -99,6 +107,27 @@ platform:
   web:
     # origins allowed to call this API with an Authorization header (platform-web dev server)
     allowed-origins: http://localhost:5173
+
+# --- resilience4j (guards every KeycloakAdminClient call, see its class-level javadoc) ---
+resilience4j:
+  circuitbreaker:
+    instances:
+      keycloakAdmin:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    instances:
+      keycloakAdmin:
+        max-attempts: 2
+        wait-duration: 500ms
+        # Only connection-level failures (timeout, refused, DNS) - never a definite HTTP response,
+        # including the 4xx statuses KeycloakAdminClientImpl maps to Business/TechnicalException.
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
 
 logging:
   pattern:

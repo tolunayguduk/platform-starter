@@ -56,5 +56,19 @@
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- Circuit breaker + retry around KeycloakAdminClient - the app now depends on Keycloak
+             being reachable for nearly everything (login, admin panel, permission resolution), so
+             a slow/unreachable Keycloak should fail fast instead of hanging every caller. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+        </dependency>
+        <!-- Publishes circuit breaker state/call metrics to the app's existing Micrometer/Prometheus
+             registry (platform-observability-starter) - lets the "keycloakAdmin" breaker itself be
+             alerted on, not just observed in logs. -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-micrometer</artifactId>
+        </dependency>
     </dependencies>
 </project>

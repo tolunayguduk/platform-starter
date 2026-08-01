@@ -1,0 +1,46 @@
+groups:
+  - name: platform-app
+    rules:
+      - alert: PlatformAppDown
+        expr: up{job="platform-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "platform-app is down"
+          description: "Prometheus has not been able to scrape platform-app for 1 minute."
+
+      - alert: HighServerErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="platform-app", outcome="SERVER_ERROR"}[5m]))
+          /
+          sum(rate(http_server_requests_seconds_count{job="platform-app"}[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "platform-app 5xx error rate above 5%"
+          description: "More than 5% of requests to platform-app returned a 5xx status over the last 5 minutes."
+
+      - alert: JvmHeapNearLimit
+        expr: |
+          jvm_memory_used_bytes{job="platform-app", area="heap"}
+          /
+          jvm_memory_max_bytes{job="platform-app", area="heap"}
+          > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "platform-app JVM heap usage above 90%"
+          description: "platform-app has used over 90% of its configured max heap for 5 minutes - risk of OutOfMemoryError."
+
+      - alert: KeycloakCircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{job="platform-app", name="keycloakAdmin", state="open"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Keycloak admin circuit breaker is open"
+          description: "platform-app has stopped calling Keycloak's admin API after repeated failures - login, admin panel and permission resolution are degraded until Keycloak recovers."

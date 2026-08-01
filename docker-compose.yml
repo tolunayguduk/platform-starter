@@ -23,6 +23,23 @@ services:
       timeout: 5s
       retries: 10
 
+  mysql-backup:
+    image: mysql:8.4
+    container_name: platform-mysql-backup
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
+    volumes:
+      - ./docker/mysql/backup.sh:/backup.sh:ro
+      # Host bind-mount, deliberately not a named volume - see backup.sh's header comment.
+      - ./backups/mysql:/backups
+    entrypoint: ["sh", "/backup.sh"]
+
   redis:
     image: redis:7-alpine
     container_name: platform-redis
@@ -71,8 +88,21 @@ services:
     profiles: ["observability"]
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
     ports:
       - "9090:9090"
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: platform-alertmanager
+    restart: unless-stopped
+    profiles: ["observability"]
+    volumes:
+      - ./docker/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
 
   grafana:
     image: grafana/grafana:11.1.0
@@ -84,6 +114,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
     ports:
       - "3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
 

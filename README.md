@@ -60,6 +60,7 @@ npm run dev
 | Vault UI | http://localhost:8200 | token: root (`.env`'deki `VAULT_DEV_ROOT_TOKEN_ID`) |
 | Grafana *(observability profile)* | http://localhost:3000 | admin / admin |
 | Prometheus *(observability profile)* | http://localhost:9090 | — |
+| Alertmanager *(observability profile)* | http://localhost:9093 | — |
 
 Yukarıdaki admin / admin, root gibi değerler sadece **varsayılan**dır ve `.env` dosyasıyla
 kendi şifrelerinizle değiştirilebilir — aşağıdaki "Admin kullanıcı adı ve şifrelerini
@@ -118,6 +119,14 @@ yokken) kullanıyor. Zaten kurulu bir ortamda `.env`'i değiştirip şifreyi gü
   migration'ları ve `realm-platform.json` importu ile her şey otomatik yeniden kurulur)
 - ya da ilgili aracın kendi arayüzünden şifreyi değiştirin (Keycloak: admin console →
   Users → admin → Credentials; MySQL: `ALTER USER 'root'@'%' IDENTIFIED BY '...'`)
+
+**Yedekleme:** `mysql-backup` servisi, `platform_user`/`platform_post` şemalarının
+`mysqldump` çıktısını her 6 saatte bir (`BACKUP_INTERVAL_SECONDS`) `./backups/mysql/`
+altına, 14 gün saklama süresiyle (`BACKUP_RETENTION_DAYS`) yazar. Bilerek isimli bir Docker
+volume'ü değil, host'un kendi dosya sistemini kullanır — `docker compose down -v` (ya da
+Docker'ın veri dizininin tamamen kaybolması, bu projede bir kez zaten yaşandı) named
+volume'leri siler ama host'taki `./backups/` klasörüne dokunmaz. Geri yüklemek için:
+`gunzip < backups/mysql/platform_user-20260101-000000.sql.gz | mysql -uroot -p`.
 
 Vault ve Grafana'nın kalıcı depolaması olmadığı için (dev/demo amaçlı), `.env`'deki değer
 her `docker compose up -d`'de hemen geçerli olur — volume silmeye gerek yok.
@@ -309,6 +318,9 @@ bilgilerinin merkezi saklama yeri.
 | Finans-grade hata yönetimi | `platform-error-starter` (Business/Technical/Security exception ayrımı) |
 | Redis cache, annotation ile | `platform-cache-starter` (`@Cacheable("role-permissions")`) |
 | Health check (liveness/readiness) | `application.yml` → `management.endpoint.health.probes.enabled=true` |
+| Keycloak çağrılarında circuit breaker + retry + timeout | `platform-security-starter/.../KeycloakAdminClientImpl` (`@CircuitBreaker`/`@Retry`, instance: `keycloakAdmin`) + `application.yml` → `resilience4j.*`, `spring.http.client.*` |
+| MySQL otomatik yedekleme | `docker-compose.yml` → `mysql-backup` servisi, `docker/mysql/backup.sh` — bkz. "Yedekleme" notu yukarıda |
+| Alerting (servis down, 5xx oranı, JVM heap, circuit breaker durumu) | `docker-compose.yml` → `alertmanager` servisi (`observability` profile), `docker/prometheus/alert-rules.yml` |
 | Vault ile secret yönetimi | `application.yml` → `spring.config.import: vault://`, `docker-compose.yml` → `vault` servisi |
 | Maven | Tüm proje Maven multi-module |
 | Katmanlı paket yapısı, MapStruct ile model dönüşümü | `module-user`, `platform-app`, `platform-security-starter/integration` — bkz. "Katmanlı paket yapısı" bölümü |
