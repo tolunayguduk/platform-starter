@@ -8,11 +8,14 @@ import {
   fetchAdminTableAuditRows,
   fetchAdminTableRows,
   fetchAdminTables,
-  fetchAdminUserUiPermissions,
   updateAdminTableRow,
   type AdminTable,
   type AdminUser,
 } from '../../api/admin';
+
+// Same three statuses/colors as the Role-Function tab - these are the function's *actual* grants
+// for one of the user's roles, not a merged "what wins" computation.
+const ACCESS_LEVEL_COLOR: Record<string, string> = { GRANTED: 'green', VISIBLE_DENIED: 'orange', HIDDEN: 'default' };
 
 /** PERMISSION/ROLE_PERMISSION are global definitions, not scoped to any one user - they're
  * represented instead by the computed Function Access tab (see UserFunctionAccessView) rather
@@ -299,52 +302,72 @@ function AdminTableTab({
   );
 }
 
-const FUNCTION_ACCESS_STATUS_COLOR: Record<string, string> = { ENABLED: 'green', DISABLED: 'orange', HIDDEN: 'default' };
+interface UserFunctionGrantRow {
+  rowKey: string;
+  functionKey: string;
+  description: string | null;
+  role: string;
+  accessLevel: string;
+}
 
-/** What UI functions this user's current roles let them see/use - the same ENABLED/DISABLED/HIDDEN
- * computation UiPermissionsService already runs for "me" (see /api/me/ui-permissions), run here for
- * someone else's roles. Read-only: this is a computed view, not a table to edit. */
-function UserFunctionAccessView({ userId }: { userId: string }) {
+/** Only functions actually assigned to one of this user's roles - not the full catalog, and not a
+ * single merged "what wins" status. A user can hold several roles, and the same function can be
+ * configured differently per role, so each (function, role) grant gets its own row, with the role
+ * it came from right next to it. Read-only: this is a raw view of role_permission, not a table to
+ * edit (edit from the Role-Function tab, against the role, not here). */
+function UserFunctionAccessView({ userId, userRoles }: { userId: string; userRoles: string[] }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
-  const [permissions, setPermissions] = useState<Record<string, string>>({});
-  const [descriptions, setDescriptions] = useState<Record<string, string | null>>({});
+  const [rows, setRows] = useState<UserFunctionGrantRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const roleSetKey = userRoles.join(',');
 
   useEffect(() => {
     if (!accessToken) return;
     setLoading(true);
-    Promise.all([fetchAdminUserUiPermissions(accessToken, userId), fetchAdminTableRows(accessToken, 'PERMISSION')])
-      .then(([uiPermissions, catalog]) => {
-        setPermissions(uiPermissions);
-        setDescriptions(
-          Object.fromEntries(catalog.rows.map((p) => [String(p.key), p.description == null ? null : String(p.description)])),
+    Promise.all([fetchAdminTableRows(accessToken, 'PERMISSION'), fetchAdminTableRows(accessToken, 'ROLE_PERMISSION')])
+      .then(([catalog, rolePermissions]) => {
+        const catalogById = new Map(
+          catalog.rows.map((p) => [
+            Number(p.id),
+            { key: String(p.key), description: p.description == null ? null : String(p.description) },
+          ]),
         );
+        const grantRows = rolePermissions.rows
+          .filter((r) => userRoles.includes(String(r.role_name)))
+          .map((r) => {
+            const permission = catalogById.get(Number(r.permission_id));
+            return {
+              rowKey: `${r.permission_id}-${r.role_name}`,
+              functionKey: permission?.key ?? `#${r.permission_id}`,
+              description: permission?.description ?? null,
+              role: String(r.role_name),
+              accessLevel: String(r.access_level),
+            };
+          })
+          .sort((a, b) => a.functionKey.localeCompare(b.functionKey) || a.role.localeCompare(b.role));
+        setRows(grantRows);
       })
       .finally(() => setLoading(false));
-  }, [accessToken, userId]);
-
-  const rows = Object.entries(permissions)
-    .map(([key, status]) => ({ key, status, description: descriptions[key] ?? null }))
-    .sort((a, b) => a.key.localeCompare(b.key));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, userId, roleSetKey]);
 
   return (
     <Table
       size="small"
-      rowKey="key"
+      rowKey="rowKey"
       loading={loading}
       dataSource={rows}
       pagination={false}
       columns={[
-        { title: t('admin.functionAccess.column.function'), dataIndex: 'key' },
+        { title: t('admin.functionAccess.column.function'), dataIndex: 'functionKey' },
         { title: t('admin.roleFunctions.column.description'), dataIndex: 'description', render: (v: string | null) => v ?? '-' },
+        { title: t('admin.functionAccess.column.role'), dataIndex: 'role' },
         {
           title: t('admin.functionAccess.column.status'),
-          dataIndex: 'status',
-          render: (status: string) => (
-            <Tag color={FUNCTION_ACCESS_STATUS_COLOR[status] ?? 'default'}>
-              {t(`admin.functionAccess.status.${status}`)}
-            </Tag>
+          dataIndex: 'accessLevel',
+          render: (accessLevel: string) => (
+            <Tag color={ACCESS_LEVEL_COLOR[accessLevel] ?? 'default'}>{t(`admin.roleFunctions.accessLevel.${accessLevel}`)}</Tag>
           ),
         },
       ]}
@@ -380,11 +403,6 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
           <Typography.Paragraph type="secondary">{t('admin.databaseTablesHint')}</Typography.Paragraph>
           <Tabs
             items={[
-              {
-                key: 'FUNCTION_ACCESS',
-                label: t('admin.functionAccess.tabLabel'),
-                children: <UserFunctionAccessView userId={selectedUser.id} />,
-              },
               ...tables.map((table) => ({
                 key: table.key,
                 label: t(`admin.tables.${toCamelKey(table.key)}`),
@@ -397,6 +415,11 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
                   />
                 ),
               })),
+              {
+                key: 'FUNCTION_ACCESS',
+                label: t('admin.functionAccess.tabLabel'),
+                children: <UserFunctionAccessView userId={selectedUser.id} userRoles={selectedUser.roles} />,
+              }
             ]}
           />
         </>

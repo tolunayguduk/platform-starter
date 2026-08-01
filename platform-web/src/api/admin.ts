@@ -94,11 +94,6 @@ export function fetchAdminUserAuditEvents(accessToken: string, userId: string): 
   return apiFetch<AdminUserAuditEvent[]>(`/api/admin/users/${userId}/audit`, { accessToken });
 }
 
-/** Values are "ENABLED" | "DISABLED" | "HIDDEN" - see UiPermissionsService on the backend. */
-export function fetchAdminUserUiPermissions(accessToken: string, userId: string): Promise<Record<string, string>> {
-  return apiFetch<Record<string, string>>(`/api/admin/users/${userId}/ui-permissions`, { accessToken });
-}
-
 export type StatsRange = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 export interface RegistrationStatsPoint {

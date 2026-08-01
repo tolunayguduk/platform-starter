@@ -211,12 +211,8 @@
       "tabLabel": "Fonksiyon Erişimi",
       "column": {
         "function": "Fonksiyon",
+        "role": "Geldiği Rol",
         "status": "Durum"
-      },
-      "status": {
-        "ENABLED": "Görünür ve Tıklanabilir",
-        "DISABLED": "Görünür, Tıklanamaz",
-        "HIDDEN": "Görünmez"
       }
     },
     "auditRevType": {

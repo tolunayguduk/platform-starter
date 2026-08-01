@@ -211,12 +211,8 @@
       "tabLabel": "Function Access",
       "column": {
         "function": "Function",
+        "role": "From Role",
         "status": "Status"
-      },
-      "status": {
-        "ENABLED": "Visible, Clickable",
-        "DISABLED": "Visible, Not Clickable",
-        "HIDDEN": "Hidden"
       }
     },
     "auditRevType": {
