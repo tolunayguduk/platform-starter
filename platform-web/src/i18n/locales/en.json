@@ -139,6 +139,19 @@
       "modified": "Modified",
       "deleted": "Deleted",
       "unknown": "Unknown"
+    },
+    "editRow": {
+      "actionsColumn": "Actions",
+      "editAction": "Edit",
+      "title": "Edit Record",
+      "confirmTitle": "Confirm Changes",
+      "save": "Save",
+      "cancel": "Cancel",
+      "back": "Back",
+      "confirm": "Confirm & Save",
+      "noChanges": "No changes were made.",
+      "success": "Record updated.",
+      "error": "Failed to update record."
     }
   },
   "notFound": {

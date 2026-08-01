@@ -1,4 +1,6 @@
 package com.platform.user.controller.model;
 
-public record AdminTableDto(String key, boolean hasAudit) {
+import java.util.List;
+
+public record AdminTableDto(String key, boolean hasAudit, List<String> editableColumns) {
 }

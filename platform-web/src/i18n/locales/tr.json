@@ -139,6 +139,19 @@
       "modified": "Güncellendi",
       "deleted": "Silindi",
       "unknown": "Bilinmiyor"
+    },
+    "editRow": {
+      "actionsColumn": "İşlemler",
+      "editAction": "Düzenle",
+      "title": "Kaydı Düzenle",
+      "confirmTitle": "Değişiklikleri Onayla",
+      "save": "Kaydet",
+      "cancel": "İptal",
+      "back": "Geri",
+      "confirm": "Onayla ve Kaydet",
+      "noChanges": "Herhangi bir değişiklik yapılmadı.",
+      "success": "Kayıt güncellendi.",
+      "error": "Kayıt güncellenemedi."
     }
   },
   "notFound": {

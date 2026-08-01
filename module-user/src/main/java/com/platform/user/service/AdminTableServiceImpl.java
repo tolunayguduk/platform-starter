@@ -1,13 +1,29 @@
 package com.platform.user.service;
 
 import com.platform.error.BusinessException;
+import com.platform.user.constant.AccessLevel;
 import com.platform.user.constant.AdminTableKey;
+import com.platform.user.constant.UiPolicy;
+import com.platform.user.entity.Permission;
+import com.platform.user.entity.RolePermission;
+import com.platform.user.entity.UserConsent;
+import com.platform.user.entity.UserContact;
+import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.PermissionRepository;
+import com.platform.user.repository.RolePermissionRepository;
+import com.platform.user.repository.UserConsentRepository;
+import com.platform.user.repository.UserContactRepository;
+import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminAuditRowsResult;
 import com.platform.user.service.model.AdminTableRowsResult;
 import com.platform.user.service.model.AdminTableSummaryResult;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -16,9 +32,16 @@ import java.util.stream.Collectors;
 /**
  * Table/column identifiers here are NEVER client-supplied - the only thing the client picks is an
  * {@link AdminTableKey} enum value (Spring rejects anything that isn't a valid enum name before
- * this class ever runs), which indexes into the hardcoded {@link #REGISTRY} below. SQL is built
- * from those whitelisted, backtick-quoted identifiers only; every value (primary key lookups) is
+ * this class ever runs), which indexes into the hardcoded {@link #REGISTRY} below. Reads are built
+ * from those whitelisted, backtick-quoted identifiers only, with every value (primary key lookups)
  * always passed as a bind parameter, never concatenated.
+ *
+ * <p>Writes never use raw SQL at all - user_profile/user_contact/user_consent/role_permission are
+ * all {@code @Audited}, and Envers only records a change when it goes through Hibernate's own
+ * dirty-checking (a JPA repository {@code save()}). A hand-rolled {@code UPDATE ... SET} would
+ * silently skip the audit trail, so {@link #updateRow} always loads the real entity via its
+ * repository, applies only the whitelisted editable fields, and saves it - exactly like every
+ * other write in this app.
  */
 @Service
 public class AdminTableServiceImpl implements AdminTableService {
@@ -26,7 +49,8 @@ public class AdminTableServiceImpl implements AdminTableService {
     private static final int MAIN_TABLE_ROW_LIMIT = 500;
     private static final int AUDIT_ROW_LIMIT = 200;
 
-    private record TableMeta(String tableName, String auditTableName, String primaryKeyColumn, List<String> columns) {
+    private record TableMeta(String tableName, String auditTableName, String primaryKeyColumn,
+                              List<String> columns, List<String> editableColumns) {
     }
 
     private static final Map<AdminTableKey, TableMeta> REGISTRY = new EnumMap<>(AdminTableKey.class);
@@ -34,31 +58,51 @@ public class AdminTableServiceImpl implements AdminTableService {
     static {
         REGISTRY.put(AdminTableKey.USER_PROFILE, new TableMeta(
                 "user_profile", "user_profile_aud", "keycloak_user_id",
-                List.of("keycloak_user_id", "full_name", "birth_date", "avatar_url", "locale", "deleted_at")));
+                List.of("keycloak_user_id", "full_name", "birth_date", "avatar_url", "locale", "deleted_at"),
+                List.of("full_name", "birth_date", "avatar_url", "locale")));
         REGISTRY.put(AdminTableKey.USER_CONTACT, new TableMeta(
                 "user_contact", "user_contact_aud", "keycloak_user_id",
-                List.of("keycloak_user_id", "phone_number", "alternate_email", "address_line", "city", "country")));
+                List.of("keycloak_user_id", "phone_number", "alternate_email", "address_line", "city", "country"),
+                List.of("phone_number", "alternate_email", "address_line", "city", "country")));
         REGISTRY.put(AdminTableKey.USER_CONSENT, new TableMeta(
                 "user_consent", "user_consent_aud", "id",
-                List.of("id", "keycloak_user_id", "consent_type", "legal_basis", "purpose", "granted_at", "revoked_at", "ip_address")));
+                List.of("id", "keycloak_user_id", "consent_type", "legal_basis", "purpose", "granted_at", "revoked_at", "ip_address"),
+                List.of("consent_type", "legal_basis", "purpose")));
         REGISTRY.put(AdminTableKey.PERMISSION, new TableMeta(
                 "permission", null, "id",
-                List.of("id", "key", "ui_policy")));
+                List.of("id", "key", "ui_policy"),
+                List.of("key", "ui_policy")));
         REGISTRY.put(AdminTableKey.ROLE_PERMISSION, new TableMeta(
                 "role_permission", "role_permission_aud", "id",
-                List.of("id", "role_name", "permission_id", "access_level")));
+                List.of("id", "role_name", "permission_id", "access_level"),
+                List.of("role_name", "permission_id", "access_level")));
     }
 
     private final JdbcTemplate jdbcTemplate;
+    private final UserProfileRepository userProfileRepository;
+    private final UserContactRepository userContactRepository;
+    private final UserConsentRepository userConsentRepository;
+    private final PermissionRepository permissionRepository;
+    private final RolePermissionRepository rolePermissionRepository;
 
-    public AdminTableServiceImpl(JdbcTemplate jdbcTemplate) {
+    public AdminTableServiceImpl(JdbcTemplate jdbcTemplate,
+                                  UserProfileRepository userProfileRepository,
+                                  UserContactRepository userContactRepository,
+                                  UserConsentRepository userConsentRepository,
+                                  PermissionRepository permissionRepository,
+                                  RolePermissionRepository rolePermissionRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.userProfileRepository = userProfileRepository;
+        this.userContactRepository = userContactRepository;
+        this.userConsentRepository = userConsentRepository;
+        this.permissionRepository = permissionRepository;
+        this.rolePermissionRepository = rolePermissionRepository;
     }
 
     @Override
     public List<AdminTableSummaryResult> listTables() {
         return REGISTRY.entrySet().stream()
-                .map(e -> new AdminTableSummaryResult(e.getKey(), e.getValue().auditTableName() != null))
+                .map(e -> new AdminTableSummaryResult(e.getKey(), e.getValue().auditTableName() != null, e.getValue().editableColumns()))
                 .toList();
     }
 
@@ -85,8 +129,140 @@ public class AdminTableServiceImpl implements AdminTableService {
         return new AdminAuditRowsResult(auditColumns, rows);
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes) {
+        TableMeta meta = REGISTRY.get(key);
+        for (String field : changes.keySet()) {
+            if (!meta.editableColumns().contains(field)) {
+                throw new BusinessException("ADMIN-4002", "error.admin.readonly_field", "Field not editable: " + field);
+            }
+        }
+
+        try {
+            switch (key) {
+                case USER_PROFILE -> updateUserProfile(primaryKeyValue, changes);
+                case USER_CONTACT -> updateUserContact(primaryKeyValue, changes);
+                case USER_CONSENT -> updateUserConsent(primaryKeyValue, changes);
+                case PERMISSION -> updatePermission(primaryKeyValue, changes);
+                case ROLE_PERMISSION -> updateRolePermission(primaryKeyValue, changes);
+            }
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException("ADMIN-4004", "error.admin.constraint_violation",
+                    "Update violates a database constraint: " + e.getMostSpecificCause().getMessage());
+        } catch (ClassCastException | IllegalArgumentException | java.time.format.DateTimeParseException e) {
+            throw new BusinessException("ADMIN-4003", "error.admin.invalid_value", "Invalid value: " + e.getMessage());
+        }
+
+        // Read the saved row back through the raw-JDBC path (same shape as getRows) rather than
+        // converting the entity by hand - each updateXxx method flushes its repository first, since
+        // this query runs on the same connection/transaction and would otherwise see Hibernate's
+        // still-unflushed write.
+        String sql = "SELECT " + quotedColumns(meta.columns()) + " FROM " + quote(meta.tableName())
+                + " WHERE " + quote(meta.primaryKeyColumn()) + " = ?";
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, primaryKeyValue);
+        if (rows.isEmpty()) {
+            throw new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + primaryKeyValue);
+        }
+        return rows.get(0);
+    }
+
+    private void updateUserProfile(String pk, Map<String, Object> changes) {
+        UserProfile entity = userProfileRepository.findById(pk)
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        if (changes.containsKey("full_name")) {
+            entity.setFullName((String) changes.get("full_name"));
+        }
+        if (changes.containsKey("birth_date")) {
+            entity.setBirthDate(parseDate(changes.get("birth_date")));
+        }
+        if (changes.containsKey("avatar_url")) {
+            entity.setAvatarUrl((String) changes.get("avatar_url"));
+        }
+        if (changes.containsKey("locale")) {
+            entity.setLocale((String) changes.get("locale"));
+        }
+        userProfileRepository.save(entity);
+        userProfileRepository.flush();
+    }
+
+    private void updateUserContact(String pk, Map<String, Object> changes) {
+        UserContact entity = userContactRepository.findById(pk)
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        if (changes.containsKey("phone_number")) {
+            entity.setPhoneNumber((String) changes.get("phone_number"));
+        }
+        if (changes.containsKey("alternate_email")) {
+            entity.setAlternateEmail((String) changes.get("alternate_email"));
+        }
+        if (changes.containsKey("address_line")) {
+            entity.setAddressLine((String) changes.get("address_line"));
+        }
+        if (changes.containsKey("city")) {
+            entity.setCity((String) changes.get("city"));
+        }
+        if (changes.containsKey("country")) {
+            entity.setCountry((String) changes.get("country"));
+        }
+        userContactRepository.save(entity);
+        userContactRepository.flush();
+    }
+
+    private void updateUserConsent(String pk, Map<String, Object> changes) {
+        UserConsent entity = userConsentRepository.findById(pk)
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        if (changes.containsKey("consent_type")) {
+            entity.setConsentType((String) changes.get("consent_type"));
+        }
+        if (changes.containsKey("legal_basis")) {
+            entity.setLegalBasis((String) changes.get("legal_basis"));
+        }
+        if (changes.containsKey("purpose")) {
+            entity.setPurpose((String) changes.get("purpose"));
+        }
+        userConsentRepository.save(entity);
+        userConsentRepository.flush();
+    }
+
+    private void updatePermission(String pk, Map<String, Object> changes) {
+        Permission entity = permissionRepository.findById(Long.valueOf(pk))
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        if (changes.containsKey("key")) {
+            entity.setKey((String) changes.get("key"));
+        }
+        if (changes.containsKey("ui_policy")) {
+            entity.setUiPolicy(UiPolicy.valueOf((String) changes.get("ui_policy")));
+        }
+        permissionRepository.save(entity);
+        permissionRepository.flush();
+    }
+
+    private void updateRolePermission(String pk, Map<String, Object> changes) {
+        RolePermission entity = rolePermissionRepository.findById(Long.valueOf(pk))
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        if (changes.containsKey("role_name")) {
+            entity.setRoleName((String) changes.get("role_name"));
+        }
+        if (changes.containsKey("permission_id")) {
+            Long permissionId = ((Number) changes.get("permission_id")).longValue();
+            Permission permission = permissionRepository.findById(permissionId)
+                    .orElseThrow(() -> new BusinessException("ADMIN-4003", "error.admin.invalid_value",
+                            "No such permission id: " + permissionId));
+            entity.setPermission(permission);
+        }
+        if (changes.containsKey("access_level")) {
+            entity.setAccessLevel(AccessLevel.valueOf((String) changes.get("access_level")));
+        }
+        rolePermissionRepository.save(entity);
+        rolePermissionRepository.flush();
+    }
+
+    private LocalDate parseDate(Object value) {
+        return value == null ? null : LocalDate.parse((String) value);
+    }
+
     private List<String> concatColumns(List<String> columns, String... extra) {
-        List<String> result = new java.util.ArrayList<>(columns);
+        List<String> result = new ArrayList<>(columns);
         result.addAll(List.of(extra));
         return result;
     }

@@ -36,6 +36,7 @@ export function fetchRegistrationStats(accessToken: string, range: StatsRange): 
 export interface AdminTable {
   key: string;
   hasAudit: boolean;
+  editableColumns: string[];
 }
 
 export interface AdminTableRows {
@@ -59,4 +60,17 @@ export function fetchAdminTableRows(accessToken: string, key: string): Promise<A
 
 export function fetchAdminTableAuditRows(accessToken: string, key: string, pk: string): Promise<AdminAuditRows> {
   return apiFetch<AdminAuditRows>(`/api/admin/tables/${key}/rows/${encodeURIComponent(pk)}/audit`, { accessToken });
+}
+
+export function updateAdminTableRow(
+  accessToken: string,
+  key: string,
+  pk: string,
+  changes: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return apiFetch<{ row: Record<string, unknown> }>(`/api/admin/tables/${key}/rows/${encodeURIComponent(pk)}`, {
+    method: 'PATCH',
+    body: { changes },
+    accessToken,
+  }).then((res) => res.row);
 }

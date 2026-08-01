@@ -3,14 +3,17 @@ package com.platform.user.controller;
 import com.platform.user.constant.AdminTableKey;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.controller.model.AdminAuditRowsDto;
+import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
+import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,4 +49,9 @@ public interface AdminController {
     /** A single row's Envers audit history, keyed by that table's primary key value. */
     @GetMapping("/tables/{key}/rows/{pk}/audit")
     AdminAuditRowsDto getAuditRows(@PathVariable AdminTableKey key, @PathVariable String pk);
+
+    /** Main-table rows only - never targets an audit table (there is no AdminTableKey for one). */
+    @PatchMapping("/tables/{key}/rows/{pk}")
+    AdminRowDto updateRow(@PathVariable AdminTableKey key, @PathVariable String pk,
+                          @RequestBody UpdateAdminRowRequestDto request);
 }

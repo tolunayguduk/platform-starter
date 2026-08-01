@@ -3,10 +3,12 @@ package com.platform.user.controller;
 import com.platform.user.constant.AdminTableKey;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.controller.model.AdminAuditRowsDto;
+import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
+import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.mapper.AdminTableMapper;
 import com.platform.user.mapper.AdminUserMapper;
@@ -64,5 +66,10 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public AdminAuditRowsDto getAuditRows(AdminTableKey key, String pk) {
         return adminTableMapper.toDto(adminTableService.getAuditRows(key, pk));
+    }
+
+    @Override
+    public AdminRowDto updateRow(AdminTableKey key, String pk, UpdateAdminRowRequestDto request) {
+        return new AdminRowDto(adminTableService.updateRow(key, pk, request.changes()));
     }
 }

@@ -6,11 +6,13 @@ import com.platform.user.service.model.AdminTableRowsResult;
 import com.platform.user.service.model.AdminTableSummaryResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Backs the admin panel's raw database table browser: the MySQL "main tables" (GDPR categories +
- * permission matrix), plus each row's Envers audit history. Read-only, admin-only inspection -
- * never a substitute for the typed repositories the rest of the app uses.
+ * permission matrix), plus each row's Envers audit history and admin-only edits. Reads go through
+ * JdbcTemplate against a whitelisted registry; writes always go through the same typed JPA
+ * repositories the rest of the app uses (never raw SQL), so Hibernate/Envers keeps auditing them.
  */
 public interface AdminTableService {
 
@@ -19,4 +21,8 @@ public interface AdminTableService {
     AdminTableRowsResult getRows(AdminTableKey key);
 
     AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue);
+
+    /** Applies only the fields present in {@code changes} (partial update) - every other column
+     * is left untouched. Rejects any column not in that table's editable set. */
+    Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes);
 }
