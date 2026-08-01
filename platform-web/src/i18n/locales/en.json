@@ -134,6 +134,13 @@
       "confirmDeleteRole": "Delete this role? This also removes all of its function grants.",
       "roleDeleted": "Role deleted.",
       "roleDeleteError": "Failed to delete role.",
+      "catalogTitle": "Functions",
+      "catalogHint": "The full function catalog, independent of any one role. Editing or deleting a function here affects every role that has it.",
+      "filterUiPolicy": "Filter by default behavior",
+      "functionUpdated": "Function updated.",
+      "functionDeleted": "Function deleted.",
+      "confirmDeleteFunction": "Delete this function entirely? It will be removed from every role that currently has it.",
+      "deleteFunctionAction": "Delete",
       "newRole": {
         "title": "Define a new role",
         "placeholder": "Role name (e.g. SUPPORT)",

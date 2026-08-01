@@ -134,6 +134,13 @@
       "confirmDeleteRole": "Bu rol silinsin mi? Bu, rolün tüm fonksiyon yetkilerini de kaldırır.",
       "roleDeleted": "Rol silindi.",
       "roleDeleteError": "Rol silinemedi.",
+      "catalogTitle": "Fonksiyonlar",
+      "catalogHint": "Belirli bir role bağlı olmayan tüm fonksiyon kataloğu. Burada bir fonksiyonu düzenlemek veya silmek, onu kullanan her rolü etkiler.",
+      "filterUiPolicy": "Varsayılan davranışa göre filtrele",
+      "functionUpdated": "Fonksiyon güncellendi.",
+      "functionDeleted": "Fonksiyon silindi.",
+      "confirmDeleteFunction": "Bu fonksiyon tamamen silinsin mi? Şu anda sahip olan tüm rollerden kaldırılacak.",
+      "deleteFunctionAction": "Sil",
       "newRole": {
         "title": "Yeni rol tanımla",
         "placeholder": "Rol adı (örn. DESTEK)",

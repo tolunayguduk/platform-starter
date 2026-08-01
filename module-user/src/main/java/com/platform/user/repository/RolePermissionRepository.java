@@ -27,4 +27,8 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
     /** Used when a role is deleted entirely - every grant referencing it would otherwise be an
      * orphaned row nothing can ever read again (Keycloak has no matching role name anymore). */
     List<RolePermission> findByRoleName(String roleName);
+
+    /** Used when a function (Permission) is deleted entirely - every role's grant of it would
+     * otherwise be an orphaned row pointing at a permission_id that no longer exists. */
+    List<RolePermission> findByPermission_Id(Long permissionId);
 }

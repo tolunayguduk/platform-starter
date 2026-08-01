@@ -188,6 +188,7 @@ public class AdminTableServiceImpl implements AdminTableService {
     @Transactional
     public void deleteRow(AdminTableKey key, String primaryKeyValue) {
         switch (key) {
+            case PERMISSION -> deletePermission(primaryKeyValue);
             case ROLE_PERMISSION -> deleteRolePermission(primaryKeyValue);
             default -> throw new BusinessException("ADMIN-4005", "error.admin.delete_not_supported",
                     "Table " + key + " does not support deleting rows");
@@ -338,6 +339,21 @@ public class AdminTableServiceImpl implements AdminTableService {
         rolePermissionRepository.delete(entity);
         rolePermissionRepository.flush();
         eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
+    }
+
+    private void deletePermission(String pk) {
+        Long permissionId = Long.valueOf(pk);
+        Permission entity = permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        // Every role's grant of this function becomes meaningless once the function itself is
+        // gone - clean those up too rather than leave orphaned rows pointing at a dead permission_id.
+        List<RolePermission> grants = rolePermissionRepository.findByPermission_Id(permissionId);
+        rolePermissionRepository.deleteAll(grants);
+        permissionRepository.delete(entity);
+        permissionRepository.flush();
+        for (String roleName : grants.stream().map(RolePermission::getRoleName).distinct().toList()) {
+            eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
+        }
     }
 
     private LocalDate parseDate(Object value) {
