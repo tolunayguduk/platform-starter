@@ -8,6 +8,7 @@ import com.platform.user.service.model.UpdateUserIdentityCommand;
 import com.platform.user.service.model.UpdateUserRolesCommand;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Backs the admin panel: identity and registration timestamp come straight from Keycloak - there
@@ -18,6 +19,14 @@ import java.util.List;
 public interface AdminUserService {
 
     List<AdminUserResult> listUsers();
+
+    /** Every realm role this application manages - Keycloak is the only place role names are
+     * defined, so this is always exactly what the realm currently has, never a hardcoded list. */
+    List<String> listManagedRoles();
+
+    /** Defines a brand new role in Keycloak - functions are then granted to it via
+     * AdminTableService (ROLE_PERMISSION), never assigned to a user directly. */
+    void createRole(String roleName);
 
     void updateUserRoles(UpdateUserRolesCommand command);
 
@@ -32,6 +41,11 @@ public interface AdminUserService {
     /** Audit trail for this user's identity/role changes, sourced from Keycloak's own admin
      * event log rather than any local table. */
     List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId);
+
+    /** Same computation UiPermissionsService already does for "me" (see UiPermissionsController),
+     * run for this user's current roles instead - lets an admin see exactly which UI functions
+     * this user's roles let them see/use, without duplicating the ENABLED/DISABLED/HIDDEN logic. */
+    Map<String, String> getUserUiPermissions(String keycloakUserId);
 
     List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range);
 }

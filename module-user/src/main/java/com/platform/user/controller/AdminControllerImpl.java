@@ -8,6 +8,8 @@ import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
 import com.platform.user.controller.model.AdminUserAuditEventDto;
 import com.platform.user.controller.model.AdminUserDto;
+import com.platform.user.controller.model.CreateAdminRowRequestDto;
+import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
@@ -24,6 +26,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @PreAuthorize("hasRole('ADMIN')")
@@ -48,6 +51,16 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
+    public List<String> listManagedRoles() {
+        return adminUserService.listManagedRoles();
+    }
+
+    @Override
+    public void createRole(CreateRoleRequestDto request) {
+        adminUserService.createRole(request.name());
+    }
+
+    @Override
     public void updateUserRoles(String id, UpdateUserRolesRequestDto request, Jwt jwt) {
         adminUserService.updateUserRoles(new UpdateUserRolesCommand(id, request.roles(), jwt.getSubject()));
     }
@@ -65,6 +78,11 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public List<AdminUserAuditEventDto> getUserAuditEvents(String id) {
         return adminUserMapper.toAuditEventDtoList(adminUserService.getUserAuditEvents(id));
+    }
+
+    @Override
+    public Map<String, String> getUserUiPermissions(String id) {
+        return adminUserService.getUserUiPermissions(id);
     }
 
     @Override
@@ -90,5 +108,15 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public AdminRowDto updateRow(AdminTableKey key, String pk, UpdateAdminRowRequestDto request) {
         return new AdminRowDto(adminTableService.updateRow(key, pk, request.changes()));
+    }
+
+    @Override
+    public AdminRowDto createRow(AdminTableKey key, CreateAdminRowRequestDto request) {
+        return new AdminRowDto(adminTableService.createRow(key, request.values()));
+    }
+
+    @Override
+    public void deleteRow(AdminTableKey key, String pk) {
+        adminTableService.deleteRow(key, pk);
     }
 }

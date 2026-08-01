@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Select, Table, Tabs, Typography } from 'antd';
+import { App, Button, Card, DatePicker, Descriptions, Form, Input, Modal, Table, Tabs, Tag, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
@@ -8,14 +8,16 @@ import {
   fetchAdminTableAuditRows,
   fetchAdminTableRows,
   fetchAdminTables,
+  fetchAdminUserUiPermissions,
   updateAdminTableRow,
   type AdminTable,
   type AdminUser,
 } from '../../api/admin';
 
-/** The only tables that carry a keycloak_user_id column - the rest (PERMISSION, ROLE_PERMISSION)
- * are global definitions, not scoped to any one user, so they have no place in a per-user view. */
-const USER_SCOPED_TABLE_KEYS = new Set(['USER_PROFILE', 'USER_CONTACT', 'USER_CONSENT']);
+/** PERMISSION/ROLE_PERMISSION are global definitions, not scoped to any one user - they're
+ * represented instead by the computed Function Access tab (see UserFunctionAccessView) rather
+ * than as raw, editable tables in this per-user view. */
+const RAW_TABLE_KEYS = new Set(['USER_PROFILE', 'USER_CONTACT', 'USER_CONSENT']);
 
 /** "USER_PROFILE" -> "userProfile", to key into the admin.tables.* i18n namespace. */
 function toCamelKey(enumKey: string): string {
@@ -45,21 +47,12 @@ function buildColumns(columns: string[]) {
 
 const REV_TYPE_KEYS: Record<string, string> = { '0': 'added', '1': 'modified', '2': 'deleted' };
 
-// The only editable columns across all five tables that aren't plain text - everything else
-// falls back to a text Input.
+// The only editable column across the three user-scoped tables that isn't plain text -
+// everything else falls back to a text Input.
 const DATE_FIELDS = new Set(['birth_date']);
-const ENUM_FIELD_OPTIONS: Record<string, string[]> = {
-  ui_policy: ['HIDE_IF_DENIED', 'DISABLE_IF_DENIED'],
-  access_level: ['GRANTED', 'VISIBLE_DENIED'],
-};
-const NUMBER_FIELDS = new Set(['permission_id']);
 
 function renderFieldInput(field: string) {
   if (DATE_FIELDS.has(field)) return <DatePicker style={{ width: '100%' }} />;
-  if (ENUM_FIELD_OPTIONS[field]) {
-    return <Select options={ENUM_FIELD_OPTIONS[field].map((v) => ({ value: v, label: v }))} />;
-  }
-  if (NUMBER_FIELDS.has(field)) return <InputNumber style={{ width: '100%' }} />;
   return <Input />;
 }
 
@@ -252,8 +245,8 @@ function AdminTableTab({
       .finally(() => setLoading(false));
   }, [accessToken, tableKey]);
 
-  // Every user-scoped table is fetched in full (same 500-row cap as before) and filtered here -
-  // no extra endpoint needed, and switching the selected user re-filters without a re-fetch.
+  // The table is fetched in full (same 500-row cap as before) and filtered here - no extra
+  // endpoint needed, and switching the selected user re-filters without a re-fetch.
   const visibleRows = rows.filter((r) => String(r.keycloak_user_id) === filterUserId);
 
   function handleSaved(updatedRow: Record<string, unknown>) {
@@ -306,6 +299,52 @@ function AdminTableTab({
   );
 }
 
+const FUNCTION_ACCESS_STATUS_COLOR: Record<string, string> = { ENABLED: 'green', DISABLED: 'orange', HIDDEN: 'default' };
+
+/** What UI functions this user's current roles let them see/use - the same ENABLED/DISABLED/HIDDEN
+ * computation UiPermissionsService already runs for "me" (see /api/me/ui-permissions), run here for
+ * someone else's roles. Read-only: this is a computed view, not a table to edit. */
+function UserFunctionAccessView({ userId }: { userId: string }) {
+  const { t } = useTranslation();
+  const { accessToken } = useAuth();
+  const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    setLoading(true);
+    fetchAdminUserUiPermissions(accessToken, userId)
+      .then(setPermissions)
+      .finally(() => setLoading(false));
+  }, [accessToken, userId]);
+
+  const rows = Object.entries(permissions)
+    .map(([key, status]) => ({ key, status }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+
+  return (
+    <Table
+      size="small"
+      rowKey="key"
+      loading={loading}
+      dataSource={rows}
+      pagination={false}
+      columns={[
+        { title: t('admin.functionAccess.column.function'), dataIndex: 'key' },
+        {
+          title: t('admin.functionAccess.column.status'),
+          dataIndex: 'status',
+          render: (status: string) => (
+            <Tag color={FUNCTION_ACCESS_STATUS_COLOR[status] ?? 'default'}>
+              {t(`admin.functionAccess.status.${status}`)}
+            </Tag>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
 export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUser | null }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
@@ -316,7 +355,7 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
       setTables([]);
       return;
     }
-    fetchAdminTables(accessToken).then((data) => setTables(data.filter((table) => USER_SCOPED_TABLE_KEYS.has(table.key))));
+    fetchAdminTables(accessToken).then((data) => setTables(data.filter((table) => RAW_TABLE_KEYS.has(table.key))));
   }, [accessToken, selectedUser]);
 
   return (
@@ -333,18 +372,25 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
         <>
           <Typography.Paragraph type="secondary">{t('admin.databaseTablesHint')}</Typography.Paragraph>
           <Tabs
-            items={tables.map((table) => ({
-              key: table.key,
-              label: t(`admin.tables.${toCamelKey(table.key)}`),
-              children: (
-                <AdminTableTab
-                  tableKey={table.key}
-                  hasAudit={table.hasAudit}
-                  editableColumns={table.editableColumns}
-                  filterUserId={selectedUser.id}
-                />
-              ),
-            }))}
+            items={[
+              {
+                key: 'FUNCTION_ACCESS',
+                label: t('admin.functionAccess.tabLabel'),
+                children: <UserFunctionAccessView userId={selectedUser.id} />,
+              },
+              ...tables.map((table) => ({
+                key: table.key,
+                label: t(`admin.tables.${toCamelKey(table.key)}`),
+                children: (
+                  <AdminTableTab
+                    tableKey={table.key}
+                    hasAudit={table.hasAudit}
+                    editableColumns={table.editableColumns}
+                    filterUserId={selectedUser.id}
+                  />
+                ),
+              })),
+            ]}
           />
         </>
       )}

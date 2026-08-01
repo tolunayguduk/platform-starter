@@ -33,10 +33,13 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserProfileRepository userProfileRepository;
     private final KeycloakAdminClient keycloakAdminClient;
+    private final UiPermissionsService uiPermissionsService;
 
-    public AdminUserServiceImpl(UserProfileRepository userProfileRepository, KeycloakAdminClient keycloakAdminClient) {
+    public AdminUserServiceImpl(UserProfileRepository userProfileRepository, KeycloakAdminClient keycloakAdminClient,
+                                 UiPermissionsService uiPermissionsService) {
         this.userProfileRepository = userProfileRepository;
         this.keycloakAdminClient = keycloakAdminClient;
+        this.uiPermissionsService = uiPermissionsService;
     }
 
     @Override
@@ -64,6 +67,19 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public List<String> listManagedRoles() {
+        return keycloakAdminClient.listRealmRoles();
+    }
+
+    @Override
+    public void createRole(String roleName) {
+        if (isBlank(roleName)) {
+            throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Role name required");
+        }
+        keycloakAdminClient.createRealmRole(roleName);
+    }
+
+    @Override
     public void updateUserRoles(UpdateUserRolesCommand command) {
         List<String> managedRoles = keycloakAdminClient.listRealmRoles();
         for (String role : command.roles()) {
@@ -80,9 +96,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                     "Cannot remove your own ADMIN role");
         }
 
-        Set<String> currentRoles = managedRoles.stream()
-                .filter(role -> keycloakAdminClient.getUserIdsWithRole(role).contains(keycloakUserId))
-                .collect(Collectors.toSet());
+        Set<String> currentRoles = resolveUserRoles(keycloakUserId, managedRoles);
 
         for (String role : command.roles()) {
             if (!currentRoles.contains(role)) {
@@ -119,6 +133,18 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    @Override
+    public Map<String, String> getUserUiPermissions(String keycloakUserId) {
+        Set<String> roles = resolveUserRoles(keycloakUserId, keycloakAdminClient.listRealmRoles());
+        return uiPermissionsService.getUiPermissions(roles);
+    }
+
+    private Set<String> resolveUserRoles(String keycloakUserId, List<String> managedRoles) {
+        return managedRoles.stream()
+                .filter(role -> keycloakAdminClient.getUserIdsWithRole(role).contains(keycloakUserId))
+                .collect(Collectors.toSet());
     }
 
     @Override

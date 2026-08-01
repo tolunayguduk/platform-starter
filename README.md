@@ -272,8 +272,9 @@ kullanıcıyı doğrudan Keycloak'ın `sub` id'siyle (`keycloak_user_id` kolonu)
 |---|---|---|
 | `role-permissions` | Rol adı → `GRANTED` izin listesi (`RolePermissionLookupService`) | 300s (`application.yml` → `platform.cache.ttls`) |
 | `role-permissions-visible-denied` | Rol adı → `VISIBLE_DENIED` izin listesi | `default-ttl` 120s |
+| `role-permissions-hidden` | Rol adı → `HIDDEN` izin listesi | `default-ttl` 120s |
 
-`role_permission` tablosu değiştiğinde (`RolePermissionLookupService`) her iki cache de `@CacheEvict(allEntries = true)` ile tamamen temizlenir.
+`role_permission` tablosu değiştiğinde (`RolePermissionLookupService`) her üç cache de `@CacheEvict(allEntries = true)` ile tamamen temizlenir.
 
 ### 4) Vault — sır (secret) yönetimi, kullanıcı verisi değil
 

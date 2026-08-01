@@ -14,6 +14,18 @@ export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
   return apiFetch<AdminUser[]>('/api/admin/users', { accessToken });
 }
 
+export function fetchAdminRoles(accessToken: string): Promise<string[]> {
+  return apiFetch<string[]>('/api/admin/roles', { accessToken });
+}
+
+export function createAdminRole(accessToken: string, name: string): Promise<void> {
+  return apiFetch<void>('/api/admin/roles', {
+    method: 'POST',
+    body: { name },
+    accessToken,
+  });
+}
+
 export function updateUserRoles(accessToken: string, userId: string, roles: string[]): Promise<void> {
   return apiFetch<void>(`/api/admin/users/${userId}/roles`, {
     method: 'PUT',
@@ -51,6 +63,11 @@ export interface AdminUserAuditEvent {
 
 export function fetchAdminUserAuditEvents(accessToken: string, userId: string): Promise<AdminUserAuditEvent[]> {
   return apiFetch<AdminUserAuditEvent[]>(`/api/admin/users/${userId}/audit`, { accessToken });
+}
+
+/** Values are "ENABLED" | "DISABLED" | "HIDDEN" - see UiPermissionsService on the backend. */
+export function fetchAdminUserUiPermissions(accessToken: string, userId: string): Promise<Record<string, string>> {
+  return apiFetch<Record<string, string>>(`/api/admin/users/${userId}/ui-permissions`, { accessToken });
 }
 
 export type StatsRange = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
@@ -104,4 +121,25 @@ export function updateAdminTableRow(
     body: { changes },
     accessToken,
   }).then((res) => res.row);
+}
+
+/** PERMISSION (defining a new function) and ROLE_PERMISSION (granting one to a role) support
+ * create; only ROLE_PERMISSION supports delete (revoking a function from a role). */
+export function createAdminTableRow(
+  accessToken: string,
+  key: string,
+  values: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return apiFetch<{ row: Record<string, unknown> }>(`/api/admin/tables/${key}/rows`, {
+    method: 'POST',
+    body: { values },
+    accessToken,
+  }).then((res) => res.row);
+}
+
+export function deleteAdminTableRow(accessToken: string, key: string, pk: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/tables/${key}/rows/${encodeURIComponent(pk)}`, {
+    method: 'DELETE',
+    accessToken,
+  });
 }

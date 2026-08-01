@@ -223,6 +223,22 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    public void createRealmRole(String roleName) {
+        restClient.post().uri("/roles")
+                .body(Map.of("name", roleName))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    if (response.getStatusCode().value() == 409) {
+                        throw new BusinessException("AUTHZ-4093",
+                                "error.admin.role_exists", "Keycloak rejected duplicate role name: " + roleName);
+                    }
+                    throw new TechnicalException("AUTHZ-4007",
+                            "Keycloak admin API rejected role creation: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
     public List<AdminEvent> getUserAdminEvents(String keycloakUserId) {
         List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
                 .retrieve()

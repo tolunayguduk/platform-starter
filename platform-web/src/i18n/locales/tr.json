@@ -105,6 +105,48 @@
   },
   "admin": {
     "title": "Admin Paneli",
+    "tab": {
+      "user": "Kullanıcı",
+      "roleFunctions": "Rol-Fonksiyon"
+    },
+    "roleFunctions": {
+      "title": "Rol-Fonksiyon Yönetimi",
+      "hint": "Fonksiyonlar doğrudan kullanıcıya değil, roller üzerinden verilir - bir rol seçip tam olarak hangi fonksiyonlara sahip olduğunu yönetin.",
+      "rolePlaceholder": "Bir rol seçin",
+      "emptyState": "Fonksiyonlarını görmek ve yönetmek için yukarıdan bir rol seçin.",
+      "column": {
+        "accessLevel": "Erişim"
+      },
+      "notGranted": "Yapılandırılmamış",
+      "accessLevel": {
+        "GRANTED": "Görünür ve Tıklanabilir",
+        "VISIBLE_DENIED": "Görünür, Tıklanamaz",
+        "HIDDEN": "Görünmez"
+      },
+      "granted": "Fonksiyon verildi.",
+      "updated": "Erişim seviyesi güncellendi.",
+      "revoked": "Fonksiyon geri alındı.",
+      "error": "Rolün fonksiyonları güncellenemedi.",
+      "newRole": {
+        "title": "Yeni rol tanımla",
+        "placeholder": "Rol adı (örn. DESTEK)",
+        "button": "Rol Oluştur",
+        "success": "Rol oluşturuldu.",
+        "error": "Rol oluşturulamadı."
+      },
+      "newFunction": {
+        "title": "Yeni fonksiyon tanımla",
+        "keyPlaceholder": "Fonksiyon anahtarı (örn. report:export)",
+        "uiPolicyPlaceholder": "Yapılandırılmamış roller için varsayılan",
+        "button": "Fonksiyon Oluştur",
+        "success": "Fonksiyon oluşturuldu.",
+        "error": "Fonksiyon oluşturulamadı."
+      },
+      "uiPolicy": {
+        "HIDE_IF_DENIED": "Varsayılan olarak görünmez",
+        "DISABLE_IF_DENIED": "Varsayılan olarak görünür, tıklanamaz"
+      }
+    },
     "registrationsTitle": "Kayıt Olan Kullanıcılar",
     "registrationsTotalFor": "{{period}} içinde toplam kayıt",
     "range": {
@@ -131,9 +173,19 @@
     "tables": {
       "userProfile": "Kullanıcı Profilleri",
       "userContact": "İletişim Bilgileri",
-      "userConsent": "Onaylar",
-      "permission": "İzinler",
-      "rolePermission": "Rol-İzin Matrisi"
+      "userConsent": "Onaylar"
+    },
+    "functionAccess": {
+      "tabLabel": "Fonksiyon Erişimi",
+      "column": {
+        "function": "Fonksiyon",
+        "status": "Durum"
+      },
+      "status": {
+        "ENABLED": "Görünür ve Tıklanabilir",
+        "DISABLED": "Görünür, Tıklanamaz",
+        "HIDDEN": "Görünmez"
+      }
     },
     "auditRevType": {
       "added": "Eklendi",

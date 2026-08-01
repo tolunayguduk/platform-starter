@@ -25,4 +25,12 @@ public interface AdminTableService {
     /** Applies only the fields present in {@code changes} (partial update) - every other column
      * is left untouched. Rejects any column not in that table's editable set. */
     Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes);
+
+    /** Only ROLE_PERMISSION supports this today (granting a function to a role) - every other
+     * table throws error.admin.create_not_supported. */
+    Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values);
+
+    /** Only ROLE_PERMISSION supports this today (revoking a function from a role) - every other
+     * table throws error.admin.delete_not_supported. */
+    void deleteRow(AdminTableKey key, String primaryKeyValue);
 }

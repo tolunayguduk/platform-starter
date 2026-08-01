@@ -36,10 +36,12 @@ public class RolePermission {
 
     /**
      * GRANTED is the only value MatrixPermissionEvaluator's real authorization check ever sees
-     * (RolePermissionLookupService.resolvePermissions filters to it). VISIBLE_DENIED exists purely
-     * for UiPermissionsController: it renders the control as DISABLED for a role that is NOT
-     * actually authorized, instead of the permission's default hidden/disabled fallback - e.g.
-     * MANAGER sees "Raporu Onayla" greyed out rather than hidden, without being able to call it.
+     * (RolePermissionLookupService.resolvePermissions filters to it). VISIBLE_DENIED and HIDDEN
+     * exist purely for UiPermissionsController and are otherwise equivalent to not having a row at
+     * all for this role/permission - VISIBLE_DENIED explicitly renders the control as DISABLED
+     * (e.g. MANAGER sees "Raporu Onayla" greyed out rather than hidden, without being able to call
+     * it), HIDDEN explicitly renders nothing at all, overriding the permission's own ui_policy
+     * default either way. A role/permission pair with no row falls back to that ui_policy default.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "access_level", nullable = false)

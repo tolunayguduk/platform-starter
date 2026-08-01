@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import {
+  fetchAdminRoles,
   fetchAdminUserAuditEvents,
   fetchAdminUsers,
   updateUserIdentity,
@@ -12,8 +13,6 @@ import {
   type AdminUser,
   type AdminUserAuditEvent,
 } from '../../api/admin';
-
-const ALL_ROLES = ['ADMIN', 'MANAGER', 'USER'];
 
 function sameRoleSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -25,11 +24,12 @@ interface EditUserModalProps {
   open: boolean;
   user: AdminUser;
   isSelf: boolean;
+  availableRoles: string[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function EditUserModal({ open, user, isSelf, onClose, onSaved }: EditUserModalProps) {
+function EditUserModal({ open, user, isSelf, availableRoles, onClose, onSaved }: EditUserModalProps) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
@@ -122,7 +122,7 @@ function EditUserModal({ open, user, isSelf, onClose, onSaved }: EditUserModalPr
             label={t('admin.editUser.fields.roles')}
             extra={isSelf ? t('admin.editUser.selfRoleHint') : undefined}
           >
-            <Select mode="multiple" options={ALL_ROLES.map((r) => ({ value: r, label: r }))} />
+            <Select mode="multiple" options={availableRoles.map((r) => ({ value: r, label: r }))} />
           </Form.Item>
         </Form>
       ) : hasChanges ? (
@@ -212,6 +212,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const { message } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
@@ -227,6 +228,11 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(loadUsers, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchAdminRoles(accessToken).then(setRoles);
+  }, [accessToken]);
 
   async function handleStatusToggle(userId: string, enabled: boolean) {
     if (!accessToken) return;
@@ -335,6 +341,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
           open
           user={editingUser}
           isSelf={editingUser.username === currentUser?.username}
+          availableRoles={roles}
           onClose={() => setEditingUser(null)}
           onSaved={loadUsers}
         />

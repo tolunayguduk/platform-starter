@@ -105,6 +105,48 @@
   },
   "admin": {
     "title": "Admin Panel",
+    "tab": {
+      "user": "User",
+      "roleFunctions": "Role-Function"
+    },
+    "roleFunctions": {
+      "title": "Role-Function Management",
+      "hint": "Functions are granted through roles, not directly to a user - pick a role to manage exactly which functions it has.",
+      "rolePlaceholder": "Select a role",
+      "emptyState": "Select a role above to see and manage its functions.",
+      "column": {
+        "accessLevel": "Access"
+      },
+      "notGranted": "Not configured",
+      "accessLevel": {
+        "GRANTED": "Visible, Clickable",
+        "VISIBLE_DENIED": "Visible, Not Clickable",
+        "HIDDEN": "Hidden"
+      },
+      "granted": "Function granted.",
+      "updated": "Access level updated.",
+      "revoked": "Function revoked.",
+      "error": "Failed to update the role's functions.",
+      "newRole": {
+        "title": "Define a new role",
+        "placeholder": "Role name (e.g. SUPPORT)",
+        "button": "Create Role",
+        "success": "Role created.",
+        "error": "Failed to create role."
+      },
+      "newFunction": {
+        "title": "Define a new function",
+        "keyPlaceholder": "Function key (e.g. report:export)",
+        "uiPolicyPlaceholder": "Default when not configured for a role",
+        "button": "Create Function",
+        "success": "Function created.",
+        "error": "Failed to create function."
+      },
+      "uiPolicy": {
+        "HIDE_IF_DENIED": "Hidden by default",
+        "DISABLE_IF_DENIED": "Visible, not clickable by default"
+      }
+    },
     "registrationsTitle": "User Registrations",
     "registrationsTotalFor": "Total registrations in the last {{period}}",
     "range": {
@@ -131,9 +173,19 @@
     "tables": {
       "userProfile": "User Profiles",
       "userContact": "Contact Info",
-      "userConsent": "Consents",
-      "permission": "Permissions",
-      "rolePermission": "Role-Permission Matrix"
+      "userConsent": "Consents"
+    },
+    "functionAccess": {
+      "tabLabel": "Function Access",
+      "column": {
+        "function": "Function",
+        "status": "Status"
+      },
+      "status": {
+        "ENABLED": "Visible, Clickable",
+        "DISABLED": "Visible, Not Clickable",
+        "HIDDEN": "Hidden"
+      }
     },
     "auditRevType": {
       "added": "Added",

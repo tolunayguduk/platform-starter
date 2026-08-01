@@ -79,7 +79,7 @@
       "enabled": true,
       "serviceAccountClientId": "platform-app-admin",
       "clientRoles": {
-        "realm-management": ["manage-users", "view-realm", "view-events"]
+        "realm-management": ["manage-users", "manage-realm", "view-realm", "view-events"]
       }
     }
   ],

@@ -18,4 +18,9 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
            "join fetch rp.permission " +
            "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.VISIBLE_DENIED")
     List<RolePermission> findVisibleDeniedByRoleNames(Collection<String> roleNames);
+
+    @Query("select rp from RolePermission rp " +
+           "join fetch rp.permission " +
+           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.HIDDEN")
+    List<RolePermission> findHiddenByRoleNames(Collection<String> roleNames);
 }

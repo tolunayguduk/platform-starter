@@ -45,6 +45,15 @@ public class RolePermissionLookupServiceImpl implements RolePermissionLookupServ
                 .collect(Collectors.toSet());
     }
 
+    @Override
+    @Cacheable(value = "role-permissions-hidden", key = "#roleNames")
+    public Set<String> resolveHiddenPermissions(Collection<String> roleNames) {
+        Set<String> sortedNames = new TreeSet<>(roleNames);
+        return repository.findHiddenByRoleNames(sortedNames).stream()
+                .map(rp -> rp.getPermission().getKey())
+                .collect(Collectors.toSet());
+    }
+
     /**
      * Matrix changed (admin panel edit) -> the cache is stale for every role-name-combination
      * that included this role. Simplest safe option: clear the whole cache region rather than
@@ -53,7 +62,8 @@ public class RolePermissionLookupServiceImpl implements RolePermissionLookupServ
     @EventListener
     @Caching(evict = {
             @CacheEvict(value = "role-permissions", allEntries = true),
-            @CacheEvict(value = "role-permissions-visible-denied", allEntries = true)
+            @CacheEvict(value = "role-permissions-visible-denied", allEntries = true),
+            @CacheEvict(value = "role-permissions-hidden", allEntries = true)
     })
     public void onRolePermissionsChanged(RolePermissionsChangedEvent event) {
         // body intentionally empty - eviction is done by the annotation

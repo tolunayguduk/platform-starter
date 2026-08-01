@@ -17,6 +17,7 @@ import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminAuditRowsResult;
 import com.platform.user.service.model.AdminTableRowsResult;
 import com.platform.user.service.model.AdminTableSummaryResult;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -84,19 +85,22 @@ public class AdminTableServiceImpl implements AdminTableService {
     private final UserConsentRepository userConsentRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AdminTableServiceImpl(JdbcTemplate jdbcTemplate,
                                   UserProfileRepository userProfileRepository,
                                   UserContactRepository userContactRepository,
                                   UserConsentRepository userConsentRepository,
                                   PermissionRepository permissionRepository,
-                                  RolePermissionRepository rolePermissionRepository) {
+                                  RolePermissionRepository rolePermissionRepository,
+                                  ApplicationEventPublisher eventPublisher) {
         this.jdbcTemplate = jdbcTemplate;
         this.userProfileRepository = userProfileRepository;
         this.userContactRepository = userContactRepository;
         this.userConsentRepository = userConsentRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -154,10 +158,46 @@ public class AdminTableServiceImpl implements AdminTableService {
             throw new BusinessException("ADMIN-4003", "error.admin.invalid_value", "Invalid value: " + e.getMessage());
         }
 
-        // Read the saved row back through the raw-JDBC path (same shape as getRows) rather than
-        // converting the entity by hand - each updateXxx method flushes its repository first, since
-        // this query runs on the same connection/transaction and would otherwise see Hibernate's
-        // still-unflushed write.
+        return readRow(meta, primaryKeyValue);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values) {
+        TableMeta meta = REGISTRY.get(key);
+
+        String newId;
+        try {
+            newId = switch (key) {
+                case PERMISSION -> createPermission(values);
+                case ROLE_PERMISSION -> createRolePermission(values);
+                default -> throw new BusinessException("ADMIN-4005", "error.admin.create_not_supported",
+                        "Table " + key + " does not support creating rows");
+            };
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException("ADMIN-4004", "error.admin.constraint_violation",
+                    "Create violates a database constraint: " + e.getMostSpecificCause().getMessage());
+        } catch (ClassCastException | IllegalArgumentException e) {
+            throw new BusinessException("ADMIN-4003", "error.admin.invalid_value", "Invalid value: " + e.getMessage());
+        }
+
+        return readRow(meta, newId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteRow(AdminTableKey key, String primaryKeyValue) {
+        switch (key) {
+            case ROLE_PERMISSION -> deleteRolePermission(primaryKeyValue);
+            default -> throw new BusinessException("ADMIN-4005", "error.admin.delete_not_supported",
+                    "Table " + key + " does not support deleting rows");
+        }
+    }
+
+    // Read the saved row back through the raw-JDBC path (same shape as getRows) rather than
+    // converting the entity by hand - every write flushes its repository first, since this query
+    // runs on the same connection/transaction and would otherwise see Hibernate's unflushed write.
+    private Map<String, Object> readRow(TableMeta meta, String primaryKeyValue) {
         String sql = "SELECT " + quotedColumns(meta.columns()) + " FROM " + quote(meta.tableName())
                 + " WHERE " + quote(meta.primaryKeyColumn()) + " = ?";
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, primaryKeyValue);
@@ -224,6 +264,19 @@ public class AdminTableServiceImpl implements AdminTableService {
         userConsentRepository.flush();
     }
 
+    private String createPermission(Map<String, Object> values) {
+        if (values.get("key") == null || values.get("ui_policy") == null) {
+            throw new BusinessException("ADMIN-4003", "error.admin.invalid_value",
+                    "key and ui_policy are both required");
+        }
+        Permission entity = new Permission();
+        entity.setKey((String) values.get("key"));
+        entity.setUiPolicy(UiPolicy.valueOf((String) values.get("ui_policy")));
+        permissionRepository.save(entity);
+        permissionRepository.flush();
+        return String.valueOf(entity.getId());
+    }
+
     private void updatePermission(String pk, Map<String, Object> changes) {
         Permission entity = permissionRepository.findById(Long.valueOf(pk))
                 .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
@@ -255,6 +308,36 @@ public class AdminTableServiceImpl implements AdminTableService {
         }
         rolePermissionRepository.save(entity);
         rolePermissionRepository.flush();
+        eventPublisher.publishEvent(new RolePermissionsChangedEvent(entity.getRoleName()));
+    }
+
+    private String createRolePermission(Map<String, Object> values) {
+        if (values.get("role_name") == null || values.get("permission_id") == null || values.get("access_level") == null) {
+            throw new BusinessException("ADMIN-4003", "error.admin.invalid_value",
+                    "role_name, permission_id and access_level are all required");
+        }
+        Long permissionId = ((Number) values.get("permission_id")).longValue();
+        Permission permission = permissionRepository.findById(permissionId)
+                .orElseThrow(() -> new BusinessException("ADMIN-4003", "error.admin.invalid_value",
+                        "No such permission id: " + permissionId));
+
+        RolePermission entity = new RolePermission();
+        entity.setRoleName((String) values.get("role_name"));
+        entity.setPermission(permission);
+        entity.setAccessLevel(AccessLevel.valueOf((String) values.get("access_level")));
+        rolePermissionRepository.save(entity);
+        rolePermissionRepository.flush();
+        eventPublisher.publishEvent(new RolePermissionsChangedEvent(entity.getRoleName()));
+        return String.valueOf(entity.getId());
+    }
+
+    private void deleteRolePermission(String pk) {
+        RolePermission entity = rolePermissionRepository.findById(Long.valueOf(pk))
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
+        String roleName = entity.getRoleName();
+        rolePermissionRepository.delete(entity);
+        rolePermissionRepository.flush();
+        eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
     }
 
     private LocalDate parseDate(Object value) {

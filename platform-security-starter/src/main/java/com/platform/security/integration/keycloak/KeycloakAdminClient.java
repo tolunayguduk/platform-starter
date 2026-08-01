@@ -11,9 +11,11 @@ import java.util.List;
 
 /**
  * Thin wrapper over the Keycloak Admin REST API, authenticated via the "keycloak-admin"
- * client-credentials registration (service account with the realm-management "manage-users"
- * role - see docker/keycloak/realm-platform.json). Keycloak stays the source of truth for
- * credentials and role assignment; this application never mirrors them.
+ * client-credentials registration (service account with the realm-management "manage-users",
+ * "manage-realm", "view-realm" and "view-events" roles - see docker/keycloak/realm-platform.json).
+ * "manage-realm" is specifically what createRealmRole needs - Keycloak gates realm-level role
+ * CRUD on it, separately from user management. Keycloak stays the source of truth for credentials
+ * and role assignment; this application never mirrors them.
  */
 public interface KeycloakAdminClient {
 
@@ -58,6 +60,10 @@ public interface KeycloakAdminClient {
     /** Every realm role this application manages - Keycloak is the only place role names are
      * defined, so the admin panel's editable-role set is always exactly what the realm has. */
     List<String> listRealmRoles();
+
+    /** Creates a new realm role - Keycloak stays the only place role names are defined, so a role
+     * only becomes assignable/manageable once it exists here, never as local metadata. */
+    void createRealmRole(String roleName);
 
     /** This user's admin-event history (identity edits, role-mapping changes) straight from
      * Keycloak's own event log - requires {@code adminEventsEnabled} on the realm. This is the

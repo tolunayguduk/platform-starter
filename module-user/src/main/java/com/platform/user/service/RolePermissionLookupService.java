@@ -13,4 +13,11 @@ public interface RolePermissionLookupService extends RolePermissionLookupPort {
      * permission's default hidden/disabled fallback. Never used for authorization decisions.
      */
     Set<String> resolveVisibleDeniedPermissions(Collection<String> roleNames);
+
+    /**
+     * UI-only: permissions explicitly marked hidden for a role (see
+     * RolePermission.AccessLevel.HIDDEN), overriding the permission's own ui_policy-based default.
+     * Never used for authorization decisions.
+     */
+    Set<String> resolveHiddenPermissions(Collection<String> roleNames);
 }
