@@ -10,6 +10,7 @@ import {
   updateUserIdentity,
   updateUserRoles,
   updateUserStatus,
+  type AdminRole,
   type AdminUser,
   type AdminUserAuditEvent,
 } from '../../api/admin';
@@ -24,7 +25,7 @@ interface EditUserModalProps {
   open: boolean;
   user: AdminUser;
   isSelf: boolean;
-  availableRoles: string[];
+  availableRoles: AdminRole[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -122,7 +123,14 @@ function EditUserModal({ open, user, isSelf, availableRoles, onClose, onSaved }:
             label={t('admin.editUser.fields.roles')}
             extra={isSelf ? t('admin.editUser.selfRoleHint') : undefined}
           >
-            <Select mode="multiple" options={availableRoles.map((r) => ({ value: r, label: r }))} />
+            <Select
+              mode="multiple"
+              options={availableRoles.map((r) => ({
+                value: r.name,
+                label: r.enabled ? r.name : t('admin.editUser.roleDisabledLabel', { role: r.name }),
+                disabled: !r.enabled,
+              }))}
+            />
           </Form.Item>
         </Form>
       ) : hasChanges ? (
@@ -212,7 +220,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const { message } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [roles, setRoles] = useState<string[]>([]);
+  const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
@@ -231,7 +239,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
 
   useEffect(() => {
     if (!accessToken) return;
-    fetchAdminRoles(accessToken).then((data) => setRoles(data.map((role) => role.name)));
+    fetchAdminRoles(accessToken).then(setRoles);
   }, [accessToken]);
 
   async function handleStatusToggle(userId: string, enabled: boolean) {

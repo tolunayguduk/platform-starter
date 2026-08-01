@@ -14,6 +14,7 @@ import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateRoleStatusRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.controller.model.UpdateUserStatusRequestDto;
@@ -55,6 +56,10 @@ public interface AdminController {
     /** Updates a role's description - purely descriptive, no authorization meaning. */
     @PutMapping("/roles/{name}")
     void updateRoleDescription(@PathVariable String name, @RequestBody UpdateRoleDescriptionRequestDto request);
+
+    /** Temporarily disables/re-enables a role - see AdminUserService.updateRoleStatus. */
+    @PutMapping("/roles/{name}/status")
+    void updateRoleStatus(@PathVariable String name, @RequestBody UpdateRoleStatusRequestDto request);
 
     /** Deletes a role entirely and cleans up its function grants. Rejects the ADMIN role. */
     @DeleteMapping("/roles/{name}")

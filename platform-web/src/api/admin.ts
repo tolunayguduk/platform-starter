@@ -17,6 +17,7 @@ export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
 export interface AdminRole {
   name: string;
   description: string | null;
+  enabled: boolean;
 }
 
 export function fetchAdminRoles(accessToken: string): Promise<AdminRole[]> {
@@ -35,6 +36,14 @@ export function updateRoleDescription(accessToken: string, name: string, descrip
   return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}`, {
     method: 'PUT',
     body: { description },
+    accessToken,
+  });
+}
+
+export function updateRoleStatus(accessToken: string, name: string, enabled: boolean): Promise<void> {
+  return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}/status`, {
+    method: 'PUT',
+    body: { enabled },
     accessToken,
   });
 }

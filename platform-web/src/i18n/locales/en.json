@@ -138,6 +138,14 @@
       "roleDeleteError": "Failed to delete role.",
       "roleUpdated": "Role updated.",
       "roleUpdateError": "Failed to update role.",
+      "enabledTag": "Enabled",
+      "disabledTag": "Disabled",
+      "enableAction": "Enable",
+      "disableAction": "Disable",
+      "confirmDisableRole": "Disable this role? Every function granted to it becomes temporarily inactive, and it can't be assigned to any user until re-enabled.",
+      "roleEnabled": "Role enabled.",
+      "roleDisabled": "Role disabled.",
+      "roleDisabledHint": "This role is disabled - re-enable it first to grant it more functions.",
       "catalogTitle": "Functions",
       "catalogHint": "The full function catalog, independent of any one role. Editing or deleting a function here affects every role that has it.",
       "filterUiPolicy": "Filter by default behavior",
@@ -145,6 +153,9 @@
       "functionDeleted": "Function deleted.",
       "confirmDeleteFunction": "Delete this function entirely? It will be removed from every role that currently has it.",
       "deleteFunctionAction": "Delete",
+      "confirmDisableFunction": "Disable this function? It becomes unusable and can't be granted to any role until re-enabled.",
+      "functionEnabled": "Function enabled.",
+      "functionDisabled": "Function disabled.",
       "newRole": {
         "title": "Define a new role",
         "placeholder": "Role name (e.g. SUPPORT)",
@@ -235,6 +246,7 @@
         "roles": "Roles"
       },
       "selfRoleHint": "You cannot remove your own ADMIN role.",
+      "roleDisabledLabel": "{{role}} (disabled)",
       "success": "User updated.",
       "error": "Failed to update user."
     },

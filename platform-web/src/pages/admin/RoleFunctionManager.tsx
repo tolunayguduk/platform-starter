@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd';
+import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
@@ -12,6 +12,7 @@ import {
   fetchAdminTableRows,
   updateAdminTableRow,
   updateRoleDescription,
+  updateRoleStatus,
   type AdminRole,
 } from '../../api/admin';
 
@@ -28,6 +29,7 @@ const PROTECTED_ROLE = 'ADMIN';
 interface PermissionCatalogEntry {
   id: number;
   key: string;
+  enabled: boolean;
 }
 
 interface FunctionGrantRow {
@@ -35,6 +37,7 @@ interface FunctionGrantRow {
   permissionId: number;
   functionKey: string;
   accessLevel: string;
+  functionEnabled: boolean;
 }
 
 function AddRoleModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
@@ -102,7 +105,7 @@ function AddFunctionModal({ open, role, catalog, alreadyGrantedPermissionIds, on
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
 
-  const availableCatalog = catalog.filter((p) => !alreadyGrantedPermissionIds.has(p.id));
+  const availableCatalog = catalog.filter((p) => !alreadyGrantedPermissionIds.has(p.id) && p.enabled);
 
   function handleClose() {
     form.resetFields();
@@ -193,7 +196,7 @@ function AddFunctionModal({ open, role, catalog, alreadyGrantedPermissionIds, on
   );
 }
 
-function RoleFunctionsPanel({ role }: { role: string }) {
+function RoleFunctionsPanel({ role, roleEnabled }: { role: string; roleEnabled: boolean }) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
@@ -210,18 +213,20 @@ function RoleFunctionsPanel({ role }: { role: string }) {
     setLoading(true);
     Promise.all([fetchAdminTableRows(accessToken, 'PERMISSION'), fetchAdminTableRows(accessToken, 'ROLE_PERMISSION')])
       .then(([permissions, rolePermissions]) => {
-        const catalogEntries = permissions.rows.map((p) => ({ id: Number(p.id), key: String(p.key) }));
+        const catalogEntries = permissions.rows.map((p) => ({ id: Number(p.id), key: String(p.key), enabled: Boolean(p.enabled) }));
         setCatalog(catalogEntries);
         const catalogById = new Map(catalogEntries.map((p) => [p.id, p]));
         const grantRows = rolePermissions.rows
           .filter((r) => r.role_name === role)
           .map((r) => {
             const permissionId = Number(r.permission_id);
+            const permission = catalogById.get(permissionId);
             return {
               grantId: String(r.id),
               permissionId,
-              functionKey: catalogById.get(permissionId)?.key ?? `#${permissionId}`,
+              functionKey: permission?.key ?? `#${permissionId}`,
               accessLevel: String(r.access_level),
+              functionEnabled: permission?.enabled ?? true,
             };
           })
           .sort((a, b) => a.functionKey.localeCompare(b.functionKey));
@@ -283,9 +288,11 @@ function RoleFunctionsPanel({ role }: { role: string }) {
           onChange={setStatusFilter}
           options={ACCESS_LEVEL_OPTIONS.map((level) => ({ value: level, label: t(`admin.roleFunctions.accessLevel.${level}`) }))}
         />
-        <Button type="primary" onClick={() => setAddModalOpen(true)}>
-          {t('admin.roleFunctions.newFunction.button')}
-        </Button>
+        <Tooltip title={roleEnabled ? undefined : t('admin.roleFunctions.roleDisabledHint')}>
+          <Button type="primary" disabled={!roleEnabled} onClick={() => setAddModalOpen(true)}>
+            {t('admin.roleFunctions.newFunction.button')}
+          </Button>
+        </Tooltip>
       </Space>
       <Table
         size="small"
@@ -294,7 +301,16 @@ function RoleFunctionsPanel({ role }: { role: string }) {
         dataSource={visibleGrants}
         pagination={false}
         columns={[
-          { title: t('admin.functionAccess.column.function'), dataIndex: 'functionKey' },
+          {
+            title: t('admin.functionAccess.column.function'),
+            dataIndex: 'functionKey',
+            render: (functionKey: string, grant: FunctionGrantRow) => (
+              <Space size={6}>
+                {functionKey}
+                {!grant.functionEnabled && <Tag color="red">{t('admin.roleFunctions.disabledTag')}</Tag>}
+              </Space>
+            ),
+          },
           {
             title: t('admin.roleFunctions.column.accessLevel'),
             key: 'accessLevel',
@@ -341,6 +357,7 @@ interface FunctionCatalogRow {
   key: string;
   uiPolicy: string;
   description: string | null;
+  enabled: boolean;
 }
 
 function AddFunctionCatalogModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
@@ -433,6 +450,7 @@ function FunctionsCatalogTable() {
             key: String(r.key),
             uiPolicy: String(r.ui_policy),
             description: r.description == null ? null : String(r.description),
+            enabled: Boolean(r.enabled),
           }))
           .sort((a, b) => a.key.localeCompare(b.key));
         setFunctions(rows);
@@ -505,6 +523,20 @@ function FunctionsCatalogTable() {
     }
   }
 
+  async function handleFunctionStatusChange(fn: FunctionCatalogRow, enabled: boolean) {
+    if (!accessToken) return;
+    setSavingId(fn.id);
+    try {
+      await updateAdminTableRow(accessToken, 'PERMISSION', fn.id, { enabled });
+      message.success(enabled ? t('admin.roleFunctions.functionEnabled') : t('admin.roleFunctions.functionDisabled'));
+      loadFunctions();
+    } catch (e) {
+      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.error')) : t('admin.roleFunctions.error'));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   return (
     <Card title={t('admin.roleFunctions.catalogTitle')}>
       <Typography.Paragraph type="secondary">{t('admin.roleFunctions.catalogHint')}</Typography.Paragraph>
@@ -569,6 +601,32 @@ function FunctionsCatalogTable() {
             ),
           },
           {
+            title: t('admin.column.status'),
+            key: 'status',
+            width: 180,
+            render: (_: unknown, fn: FunctionCatalogRow) => (
+              <Space size={6}>
+                <Tag color={fn.enabled ? 'green' : 'red'}>
+                  {fn.enabled ? t('admin.roleFunctions.enabledTag') : t('admin.roleFunctions.disabledTag')}
+                </Tag>
+                <Popconfirm
+                  title={t('admin.roleFunctions.confirmDisableFunction')}
+                  onConfirm={() => handleFunctionStatusChange(fn, false)}
+                  disabled={!fn.enabled}
+                >
+                  <Button
+                    size="small"
+                    danger={fn.enabled}
+                    loading={savingId === fn.id}
+                    onClick={fn.enabled ? undefined : () => handleFunctionStatusChange(fn, true)}
+                  >
+                    {fn.enabled ? t('admin.roleFunctions.disableAction') : t('admin.roleFunctions.enableAction')}
+                  </Button>
+                </Popconfirm>
+              </Space>
+            ),
+          },
+          {
             title: t('admin.editRow.actionsColumn'),
             key: 'actions',
             render: (_: unknown, fn: FunctionCatalogRow) => (
@@ -605,6 +663,7 @@ export function RoleFunctionManager() {
   const [addRoleModalOpen, setAddRoleModalOpen] = useState(false);
   const [deletingRole, setDeletingRole] = useState<string | null>(null);
   const [savingDescriptionFor, setSavingDescriptionFor] = useState<string | null>(null);
+  const [savingStatusFor, setSavingStatusFor] = useState<string | null>(null);
 
   function loadRoles() {
     if (!accessToken) return;
@@ -649,6 +708,22 @@ export function RoleFunctionManager() {
     }
   }
 
+  async function handleRoleStatusChange(role: AdminRole, enabled: boolean) {
+    if (!accessToken) return;
+    setSavingStatusFor(role.name);
+    try {
+      await updateRoleStatus(accessToken, role.name, enabled);
+      message.success(enabled ? t('admin.roleFunctions.roleEnabled') : t('admin.roleFunctions.roleDisabled'));
+      loadRoles();
+    } catch (e) {
+      message.error(
+        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.roleUpdateError')) : t('admin.roleFunctions.roleUpdateError'),
+      );
+    } finally {
+      setSavingStatusFor(null);
+    }
+  }
+
   const visibleRoles = roles.filter(
     (role) =>
       role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
@@ -676,7 +751,7 @@ export function RoleFunctionManager() {
           loading={loading}
           dataSource={visibleRoles}
           pagination={false}
-          expandable={{ expandedRowRender: (record) => <RoleFunctionsPanel role={record.name} /> }}
+          expandable={{ expandedRowRender: (record) => <RoleFunctionsPanel role={record.name} roleEnabled={record.enabled} /> }}
           columns={[
             { title: t('admin.roleFunctions.column.role'), dataIndex: 'name', width: 200 },
             {
@@ -691,6 +766,32 @@ export function RoleFunctionManager() {
                   onBlur={(e) => handleDescriptionChange(role, e.target.value.trim())}
                   onPressEnter={(e) => e.currentTarget.blur()}
                 />
+              ),
+            },
+            {
+              title: t('admin.column.status'),
+              key: 'status',
+              width: 180,
+              render: (_: unknown, role: AdminRole) => (
+                <Space size={6}>
+                  <Tag color={role.enabled ? 'green' : 'red'}>
+                    {role.enabled ? t('admin.roleFunctions.enabledTag') : t('admin.roleFunctions.disabledTag')}
+                  </Tag>
+                  <Popconfirm
+                    title={t('admin.roleFunctions.confirmDisableRole')}
+                    onConfirm={() => handleRoleStatusChange(role, false)}
+                    disabled={!role.enabled}
+                  >
+                    <Button
+                      size="small"
+                      danger={role.enabled}
+                      loading={savingStatusFor === role.name}
+                      onClick={role.enabled ? undefined : () => handleRoleStatusChange(role, true)}
+                    >
+                      {role.enabled ? t('admin.roleFunctions.disableAction') : t('admin.roleFunctions.enableAction')}
+                    </Button>
+                  </Popconfirm>
+                </Space>
               ),
             },
             {

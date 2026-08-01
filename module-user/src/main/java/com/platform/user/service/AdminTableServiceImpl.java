@@ -11,6 +11,7 @@ import com.platform.user.entity.UserContact;
 import com.platform.user.entity.UserProfile;
 import com.platform.user.repository.PermissionRepository;
 import com.platform.user.repository.RolePermissionRepository;
+import com.platform.user.repository.RoleStateRepository;
 import com.platform.user.repository.UserConsentRepository;
 import com.platform.user.repository.UserContactRepository;
 import com.platform.user.repository.UserProfileRepository;
@@ -71,8 +72,8 @@ public class AdminTableServiceImpl implements AdminTableService {
                 List.of("consent_type", "legal_basis", "purpose")));
         REGISTRY.put(AdminTableKey.PERMISSION, new TableMeta(
                 "permission", null, "id",
-                List.of("id", "key", "ui_policy", "description"),
-                List.of("key", "ui_policy", "description")));
+                List.of("id", "key", "ui_policy", "description", "enabled"),
+                List.of("key", "ui_policy", "description", "enabled")));
         REGISTRY.put(AdminTableKey.ROLE_PERMISSION, new TableMeta(
                 "role_permission", "role_permission_aud", "id",
                 List.of("id", "role_name", "permission_id", "access_level"),
@@ -85,6 +86,7 @@ public class AdminTableServiceImpl implements AdminTableService {
     private final UserConsentRepository userConsentRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final RoleStateRepository roleStateRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public AdminTableServiceImpl(JdbcTemplate jdbcTemplate,
@@ -93,6 +95,7 @@ public class AdminTableServiceImpl implements AdminTableService {
                                   UserConsentRepository userConsentRepository,
                                   PermissionRepository permissionRepository,
                                   RolePermissionRepository rolePermissionRepository,
+                                  RoleStateRepository roleStateRepository,
                                   ApplicationEventPublisher eventPublisher) {
         this.jdbcTemplate = jdbcTemplate;
         this.userProfileRepository = userProfileRepository;
@@ -100,6 +103,7 @@ public class AdminTableServiceImpl implements AdminTableService {
         this.userConsentRepository = userConsentRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.roleStateRepository = roleStateRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -293,21 +297,35 @@ public class AdminTableServiceImpl implements AdminTableService {
         if (changes.containsKey("description")) {
             entity.setDescription((String) changes.get("description"));
         }
+        if (changes.containsKey("enabled")) {
+            entity.setEnabled((Boolean) changes.get("enabled"));
+        }
         permissionRepository.save(entity);
         permissionRepository.flush();
+        if (changes.containsKey("enabled")) {
+            // Every role that had this function granted needs its cache re-evaluated - disabling
+            // it makes those grants inert, enabling it makes them live again.
+            for (String roleName : rolePermissionRepository.findByPermission_Id(entity.getId()).stream()
+                    .map(RolePermission::getRoleName).distinct().toList()) {
+                eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
+            }
+        }
     }
 
     private void updateRolePermission(String pk, Map<String, Object> changes) {
         RolePermission entity = rolePermissionRepository.findById(Long.valueOf(pk))
                 .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such row: " + pk));
         if (changes.containsKey("role_name")) {
-            entity.setRoleName((String) changes.get("role_name"));
+            String roleName = (String) changes.get("role_name");
+            assertRoleEnabled(roleName);
+            entity.setRoleName(roleName);
         }
         if (changes.containsKey("permission_id")) {
             Long permissionId = ((Number) changes.get("permission_id")).longValue();
             Permission permission = permissionRepository.findById(permissionId)
                     .orElseThrow(() -> new BusinessException("ADMIN-4003", "error.admin.invalid_value",
                             "No such permission id: " + permissionId));
+            assertPermissionEnabled(permission);
             entity.setPermission(permission);
         }
         if (changes.containsKey("access_level")) {
@@ -323,19 +341,38 @@ public class AdminTableServiceImpl implements AdminTableService {
             throw new BusinessException("ADMIN-4003", "error.admin.invalid_value",
                     "role_name, permission_id and access_level are all required");
         }
+        String roleName = (String) values.get("role_name");
+        assertRoleEnabled(roleName);
         Long permissionId = ((Number) values.get("permission_id")).longValue();
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new BusinessException("ADMIN-4003", "error.admin.invalid_value",
                         "No such permission id: " + permissionId));
+        assertPermissionEnabled(permission);
 
         RolePermission entity = new RolePermission();
-        entity.setRoleName((String) values.get("role_name"));
+        entity.setRoleName(roleName);
         entity.setPermission(permission);
         entity.setAccessLevel(AccessLevel.valueOf((String) values.get("access_level")));
         rolePermissionRepository.save(entity);
         rolePermissionRepository.flush();
         eventPublisher.publishEvent(new RolePermissionsChangedEvent(entity.getRoleName()));
         return String.valueOf(entity.getId());
+    }
+
+    // Disabled roles/functions can't receive a new (or retargeted) grant - existing grants of them
+    // are left in place but inert, per RolePermissionRepository's query-level enabled filtering.
+    private void assertRoleEnabled(String roleName) {
+        boolean disabled = roleStateRepository.findById(roleName).map(rs -> !rs.isEnabled()).orElse(false);
+        if (disabled) {
+            throw new BusinessException("ADMIN-4006", "error.admin.role_disabled", "Role is disabled: " + roleName);
+        }
+    }
+
+    private void assertPermissionEnabled(Permission permission) {
+        if (!permission.isEnabled()) {
+            throw new BusinessException("ADMIN-4007", "error.admin.function_disabled",
+                    "Function is disabled: " + permission.getKey());
+        }
     }
 
     private void deleteRolePermission(String pk) {

@@ -138,6 +138,14 @@
       "roleDeleteError": "Rol silinemedi.",
       "roleUpdated": "Rol güncellendi.",
       "roleUpdateError": "Rol güncellenemedi.",
+      "enabledTag": "Etkin",
+      "disabledTag": "Devre Dışı",
+      "enableAction": "Etkinleştir",
+      "disableAction": "Devre Dışı Bırak",
+      "confirmDisableRole": "Bu rol devre dışı bırakılsın mı? Role verilmiş tüm fonksiyonlar geçici olarak devre dışı kalır ve rol, tekrar etkinleştirilene kadar hiçbir kullanıcıya atanamaz.",
+      "roleEnabled": "Rol etkinleştirildi.",
+      "roleDisabled": "Rol devre dışı bırakıldı.",
+      "roleDisabledHint": "Bu rol devre dışı - daha fazla fonksiyon vermek için önce tekrar etkinleştirin.",
       "catalogTitle": "Fonksiyonlar",
       "catalogHint": "Belirli bir role bağlı olmayan tüm fonksiyon kataloğu. Burada bir fonksiyonu düzenlemek veya silmek, onu kullanan her rolü etkiler.",
       "filterUiPolicy": "Varsayılan davranışa göre filtrele",
@@ -145,6 +153,9 @@
       "functionDeleted": "Fonksiyon silindi.",
       "confirmDeleteFunction": "Bu fonksiyon tamamen silinsin mi? Şu anda sahip olan tüm rollerden kaldırılacak.",
       "deleteFunctionAction": "Sil",
+      "confirmDisableFunction": "Bu fonksiyon devre dışı bırakılsın mı? Kullanılamaz hale gelir ve tekrar etkinleştirilene kadar hiçbir role atanamaz.",
+      "functionEnabled": "Fonksiyon etkinleştirildi.",
+      "functionDisabled": "Fonksiyon devre dışı bırakıldı.",
       "newRole": {
         "title": "Yeni rol tanımla",
         "placeholder": "Rol adı (örn. DESTEK)",
@@ -235,6 +246,7 @@
         "roles": "Roller"
       },
       "selfRoleHint": "Kendi ADMIN rolünüzü kaldıramazsınız.",
+      "roleDisabledLabel": "{{role}} (devre dışı)",
       "success": "Kullanıcı güncellendi.",
       "error": "Kullanıcı güncellenemedi."
     },

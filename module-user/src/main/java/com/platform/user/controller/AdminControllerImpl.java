@@ -14,6 +14,7 @@ import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateRoleStatusRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.controller.model.UpdateUserStatusRequestDto;
@@ -65,6 +66,11 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public void updateRoleDescription(String name, UpdateRoleDescriptionRequestDto request) {
         adminUserService.updateRoleDescription(name, request.description());
+    }
+
+    @Override
+    public void updateRoleStatus(String name, UpdateRoleStatusRequestDto request) {
+        adminUserService.updateRoleStatus(name, request.enabled());
     }
 
     @Override

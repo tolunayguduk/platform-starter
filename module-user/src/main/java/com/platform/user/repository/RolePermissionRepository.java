@@ -9,19 +9,28 @@ import java.util.List;
 
 public interface RolePermissionRepository extends JpaRepository<RolePermission, Long> {
 
+    // Every one of these three excludes disabled functions (permission.enabled = false) so a
+    // disabled function is inert everywhere, including the real hasPermission() authorization
+    // path (RolePermissionLookupServiceImpl.resolvePermissions) - not just hidden in the UI.
+    // Disabled *roles* are filtered separately, before roleNames ever reaches these queries (see
+    // RolePermissionLookupServiceImpl) - keeping that check there means it's shared by all three.
+
     @Query("select rp from RolePermission rp " +
            "join fetch rp.permission " +
-           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.GRANTED")
+           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.GRANTED " +
+           "and rp.permission.enabled = true")
     List<RolePermission> findGrantedByRoleNames(Collection<String> roleNames);
 
     @Query("select rp from RolePermission rp " +
            "join fetch rp.permission " +
-           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.VISIBLE_DENIED")
+           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.VISIBLE_DENIED " +
+           "and rp.permission.enabled = true")
     List<RolePermission> findVisibleDeniedByRoleNames(Collection<String> roleNames);
 
     @Query("select rp from RolePermission rp " +
            "join fetch rp.permission " +
-           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.HIDDEN")
+           "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.HIDDEN " +
+           "and rp.permission.enabled = true")
     List<RolePermission> findHiddenByRoleNames(Collection<String> roleNames);
 
     /** Used when a role is deleted entirely - every grant referencing it would otherwise be an

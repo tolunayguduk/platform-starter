@@ -38,6 +38,12 @@ public class Permission {
     @Column
     private String description;
 
+    /** When false, this function can't be granted to a role and every existing grant of it becomes
+     * inert - see RolePermissionRepository, whose granted/visibleDenied/hidden queries all exclude
+     * disabled permissions so this is enforced in the real authorization path, not just the UI. */
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     public Long getId() {
         return id;
     }
@@ -64,5 +70,13 @@ public class Permission {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

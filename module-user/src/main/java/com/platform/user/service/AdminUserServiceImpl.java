@@ -4,9 +4,12 @@ import com.platform.error.BusinessException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
+import com.platform.security.integration.keycloak.model.RealmRole;
 import com.platform.user.constant.StatsRange;
+import com.platform.user.entity.RoleState;
 import com.platform.user.entity.UserProfile;
 import com.platform.user.repository.RolePermissionRepository;
+import com.platform.user.repository.RoleStateRepository;
 import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminRoleResult;
 import com.platform.user.service.model.AdminUserAuditEventResult;
@@ -43,15 +46,17 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final KeycloakAdminClient keycloakAdminClient;
     private final UiPermissionsService uiPermissionsService;
     private final RolePermissionRepository rolePermissionRepository;
+    private final RoleStateRepository roleStateRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public AdminUserServiceImpl(UserProfileRepository userProfileRepository, KeycloakAdminClient keycloakAdminClient,
                                  UiPermissionsService uiPermissionsService, RolePermissionRepository rolePermissionRepository,
-                                 ApplicationEventPublisher eventPublisher) {
+                                 RoleStateRepository roleStateRepository, ApplicationEventPublisher eventPublisher) {
         this.userProfileRepository = userProfileRepository;
         this.keycloakAdminClient = keycloakAdminClient;
         this.uiPermissionsService = uiPermissionsService;
         this.rolePermissionRepository = rolePermissionRepository;
+        this.roleStateRepository = roleStateRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -81,9 +86,26 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public List<AdminRoleResult> listManagedRoles() {
-        return keycloakAdminClient.listRealmRolesDetailed().stream()
-                .map(r -> new AdminRoleResult(r.name(), r.description()))
+        List<RealmRole> roles = keycloakAdminClient.listRealmRolesDetailed();
+        Set<String> disabledRoleNames = roleStateRepository.findByRoleNameIn(roles.stream().map(r -> r.name()).toList()).stream()
+                .filter(rs -> !rs.isEnabled())
+                .map(RoleState::getRoleName)
+                .collect(Collectors.toSet());
+        return roles.stream()
+                .map(r -> new AdminRoleResult(r.name(), r.description(), !disabledRoleNames.contains(r.name())))
                 .toList();
+    }
+
+    @Override
+    public void updateRoleStatus(String roleName, boolean enabled) {
+        RoleState state = roleStateRepository.findById(roleName).orElseGet(() -> {
+            RoleState s = new RoleState();
+            s.setRoleName(roleName);
+            return s;
+        });
+        state.setEnabled(enabled);
+        roleStateRepository.save(state);
+        eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
     }
 
     @Override
@@ -130,6 +152,16 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
 
         Set<String> currentRoles = resolveUserRoles(keycloakUserId, managedRoles);
+
+        Set<String> newlyAssignedRoles = command.roles().stream().filter(role -> !currentRoles.contains(role)).collect(Collectors.toSet());
+        Set<String> disabledAmongNewlyAssigned = roleStateRepository.findByRoleNameIn(newlyAssignedRoles).stream()
+                .filter(rs -> !rs.isEnabled())
+                .map(RoleState::getRoleName)
+                .collect(Collectors.toSet());
+        if (!disabledAmongNewlyAssigned.isEmpty()) {
+            throw new BusinessException("USER-4005", "error.admin.role_disabled",
+                    "Cannot assign disabled role(s): " + disabledAmongNewlyAssigned);
+        }
 
         for (String role : command.roles()) {
             if (!currentRoles.contains(role)) {

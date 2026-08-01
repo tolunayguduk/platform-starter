@@ -33,6 +33,12 @@ public interface AdminUserService {
     /** Updates a role's description - purely descriptive, no authorization meaning. */
     void updateRoleDescription(String roleName, String description);
 
+    /** Temporarily disables/re-enables a role - purely local policy (Keycloak has no such concept
+     * for roles). While disabled: every function granted to it becomes inert (excluded from the
+     * real authorization path, see RolePermissionLookupServiceImpl), and it can no longer be newly
+     * assigned to a user (see updateUserRoles). Already-held assignments are left alone. */
+    void updateRoleStatus(String roleName, boolean enabled);
+
     /** Deletes a role entirely (rejects the one this admin panel itself is gated on) and cleans up
      * its now-orphaned function grants. */
     void deleteRole(String roleName);
