@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Descriptions, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Descriptions, Form, Input, Modal, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
@@ -217,7 +217,7 @@ interface UsersTableProps {
 
 export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const { t } = useTranslation();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
@@ -305,32 +305,31 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
             render: (status: string, record: AdminUser) => {
               const enabled = status === 'ACTIVE';
               const isSelf = record.username === currentUser?.username;
-              const toggleButton = (
-                <Button
-                  size="small"
-                  danger={enabled}
-                  disabled={isSelf && enabled}
-                  loading={statusSavingId === record.id}
-                  onClick={enabled ? undefined : () => handleStatusToggle(record.id, true)}
-                >
-                  {enabled ? t('admin.status.disable') : t('admin.status.enable')}
-                </Button>
-              );
               return (
-                <Space size={6} onClick={(e) => e.stopPropagation()}>
-                  <Tag color={enabled ? 'green' : 'red'}>{status}</Tag>
-                  {enabled ? (
-                    <Popconfirm
-                      title={t('admin.status.confirmDisable')}
-                      onConfirm={() => handleStatusToggle(record.id, false)}
-                      disabled={isSelf}
-                    >
-                      {toggleButton}
-                    </Popconfirm>
-                  ) : (
-                    toggleButton
-                  )}
-                </Space>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Segmented
+                    size="small"
+                    value={enabled ? 'enabled' : 'disabled'}
+                    disabled={statusSavingId === record.id || (isSelf && enabled)}
+                    onChange={(value) => {
+                      if (value === 'enabled') {
+                        handleStatusToggle(record.id, true);
+                        return;
+                      }
+                      modal.confirm({
+                        title: t('admin.status.confirmDisable'),
+                        okButtonProps: { danger: true },
+                        okText: t('admin.roleFunctions.disableAction'),
+                        cancelText: t('admin.editRow.cancel'),
+                        onOk: () => handleStatusToggle(record.id, false),
+                      });
+                    }}
+                    options={[
+                      { label: t('admin.roleFunctions.enabledTag'), value: 'enabled' },
+                      { label: t('admin.roleFunctions.disabledTag'), value: 'disabled' },
+                    ]}
+                  />
+                </div>
               );
             },
           },

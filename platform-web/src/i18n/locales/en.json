@@ -118,7 +118,8 @@
       "column": {
         "role": "Role",
         "description": "Description",
-        "accessLevel": "Access"
+        "accessLevel": "Access",
+        "uiPolicy": "Default Behavior"
       },
       "descriptionPlaceholder": "Description",
       "accessLevel": {
@@ -256,8 +257,6 @@
       }
     },
     "status": {
-      "enable": "Enable",
-      "disable": "Disable",
       "confirmDisable": "Disable this user? They will not be able to log in.",
       "enabled": "User enabled.",
       "disabled": "User disabled.",

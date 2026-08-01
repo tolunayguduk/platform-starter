@@ -118,7 +118,8 @@
       "column": {
         "role": "Rol",
         "description": "Açıklama",
-        "accessLevel": "Erişim"
+        "accessLevel": "Erişim",
+        "uiPolicy": "Varsayılan Davranış"
       },
       "descriptionPlaceholder": "Açıklama",
       "accessLevel": {
@@ -256,8 +257,6 @@
       }
     },
     "status": {
-      "enable": "Etkinleştir",
-      "disable": "Devre Dışı Bırak",
       "confirmDisable": "Bu kullanıcı devre dışı bırakılsın mı? Artık giriş yapamayacak.",
       "enabled": "Kullanıcı etkinleştirildi.",
       "disabled": "Kullanıcı devre dışı bırakıldı.",
