@@ -119,7 +119,14 @@
         "role": "Rol",
         "description": "Açıklama",
         "accessLevel": "Erişim",
-        "uiPolicy": "Varsayılan Davranış"
+        "uiPolicy": "Varsayılan Davranış",
+        "userCount": "Kullanıcı Sayısı"
+      },
+      "stats": {
+        "totalRoles": "Toplam Rol",
+        "assignedRoles": "Atanmış Rol",
+        "totalFunctions": "Toplam Fonksiyon",
+        "assignedFunctions": "Atanmış Fonksiyon"
       },
       "descriptionPlaceholder": "Açıklama",
       "accessLevel": {

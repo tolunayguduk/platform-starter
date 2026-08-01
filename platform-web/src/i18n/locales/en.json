@@ -119,7 +119,14 @@
         "role": "Role",
         "description": "Description",
         "accessLevel": "Access",
-        "uiPolicy": "Default Behavior"
+        "uiPolicy": "Default Behavior",
+        "userCount": "User Count"
+      },
+      "stats": {
+        "totalRoles": "Total Roles",
+        "assignedRoles": "Assigned Roles",
+        "totalFunctions": "Total Functions",
+        "assignedFunctions": "Assigned Functions"
       },
       "descriptionPlaceholder": "Description",
       "accessLevel": {
