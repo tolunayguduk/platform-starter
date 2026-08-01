@@ -1,12 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import {
-  fetchMe,
-  login as loginApi,
-  logout as logoutApi,
-  refresh as refreshApi,
-  type CurrentUser,
-  type TokenResponse,
-} from '../api/auth';
+import { login as loginApi, logout as logoutApi, refresh as refreshApi } from '../api/authApi';
+import { fetchMe } from '../api/meApi';
+import type { CurrentUser, TokenResponse } from '../types/auth';
 
 const REFRESH_TOKEN_KEY = 'platform.refreshToken';
 

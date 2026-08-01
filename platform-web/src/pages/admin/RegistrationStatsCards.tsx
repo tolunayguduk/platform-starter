@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Card, Col, Row, Statistic } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../auth/AuthContext';
-import { fetchRegistrationStats, type StatsRange } from '../../api/admin';
+import { useAuth } from '../../store/AuthContext';
+import { fetchRegistrationStats } from '../../api/adminApi';
+import type { StatsRange } from '../../types/admin';
 
 const RANGES: StatsRange[] = ['DAY', 'WEEK', 'MONTH', 'YEAR'];
 

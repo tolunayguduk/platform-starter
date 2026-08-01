@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { WHITE_THEME_COLOR, DARK_THEME_COLOR } from './themeColors';
+import { WHITE_THEME_COLOR, DARK_THEME_COLOR } from '../utils/themeColors';
 
 function prefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;

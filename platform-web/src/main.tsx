@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './i18n'
 import App from './App.tsx'
-import { AuthProvider } from './auth/AuthContext.tsx'
+import { AuthProvider } from './store/AuthContext.tsx'
 import { AppThemeProvider } from './AppThemeProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(

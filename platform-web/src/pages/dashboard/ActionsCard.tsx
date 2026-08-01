@@ -1,7 +1,7 @@
 import { Card, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { PermissionButton } from '../../components/PermissionButton';
-import type { UiPermissions } from '../../api/permissions';
+import type { UiPermissions } from '../../types/permissions';
 
 export function ActionsCard({ uiPerms }: { uiPerms: UiPermissions }) {
   const { t } = useTranslation();

@@ -1,5 +1,5 @@
 import { Button } from 'antd';
-import type { UiPermissionState } from '../api/permissions';
+import type { UiPermissionState } from '../types/permissions';
 
 /**
  * ENABLED -> normal button, DISABLED -> disabled button, HIDDEN -> renders nothing.

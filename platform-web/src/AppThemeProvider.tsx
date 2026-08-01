@@ -1,8 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { App, ConfigProvider } from 'antd';
-import { useAppTheme } from './theme/useAppTheme';
-import { useEffectiveDarkMode } from './theme/useEffectiveDarkMode';
-import { ThemeSettingsProvider, useThemeSettings } from './theme/ThemeSettingsContext';
+import { useAppTheme } from './hooks/useAppTheme';
+import { useEffectiveDarkMode } from './hooks/useEffectiveDarkMode';
+import { ThemeSettingsProvider, useThemeSettings } from './store/ThemeSettingsContext';
 
 function ConfigProviderWithTheme({ children }: { children: ReactNode }) {
   const { themeColor } = useThemeSettings();

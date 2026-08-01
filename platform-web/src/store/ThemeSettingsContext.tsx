@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { DEFAULT_THEME_COLOR } from './themeColors';
+import { DEFAULT_THEME_COLOR } from '../utils/themeColors';
 
 const STORAGE_KEY = 'platform.themeColor';
 

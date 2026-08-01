@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Typography, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../auth/AuthContext';
-import { fetchUiPermissions, type UiPermissions } from '../api/permissions';
+import { useAuth } from '../store/AuthContext';
+import { fetchUiPermissions } from '../api/permissionsApi';
+import type { UiPermissions } from '../types/permissions';
 import { AccountInfoCard } from './dashboard/AccountInfoCard';
 import { ActionsCard } from './dashboard/ActionsCard';
 import styles from './DashboardPage.module.css';

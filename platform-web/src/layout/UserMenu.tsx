@@ -3,7 +3,7 @@ import { Dropdown, Space, Avatar, Typography, type MenuProps } from 'antd';
 import { UserOutlined, DownOutlined, SettingOutlined, LogoutOutlined, DashboardOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
+import { useAuth } from '../store/AuthContext';
 import styles from './UserMenu.module.css';
 
 /** The navbar's hover dropdown: username -> profile / settings / logout.

@@ -1,6 +1,6 @@
 import { Card, Descriptions } from 'antd';
 import { useTranslation } from 'react-i18next';
-import type { CurrentUser } from '../../api/auth';
+import type { CurrentUser } from '../../types/auth';
 
 export function AccountInfoCard({ user }: { user: CurrentUser }) {
   const { t } = useTranslation();

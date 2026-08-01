@@ -1,5 +1,5 @@
 import { theme as antdTheme, type ThemeConfig } from 'antd';
-import { getEffectiveAccentColor } from './contrast';
+import { getEffectiveAccentColor } from '../utils/contrast';
 
 export function useAppTheme(primaryColor: string, dark: boolean): ThemeConfig {
   return {

@@ -1,5 +1,3 @@
-import { apiFetch } from './client';
-
 export interface Consent {
   consentType: string;
   legalBasis: string;
@@ -28,20 +26,8 @@ export interface MyProfile {
 
 export type UpdateProfileFields = Omit<MyProfile, 'username' | 'consents'>;
 
-export function fetchMyProfile(accessToken: string): Promise<MyProfile> {
-  return apiFetch<MyProfile>('/api/me/profile', { accessToken });
-}
-
-export function updateMyProfile(accessToken: string, fields: UpdateProfileFields): Promise<MyProfile> {
-  return apiFetch<MyProfile>('/api/me/profile', { method: 'PUT', body: fields, accessToken });
-}
-
 export interface ChangePasswordFields {
   currentPassword: string;
   newPassword: string;
   confirmNewPassword: string;
-}
-
-export function changePassword(accessToken: string, fields: ChangePasswordFields): Promise<void> {
-  return apiFetch<void>('/api/me/password', { method: 'POST', body: fields, accessToken });
 }

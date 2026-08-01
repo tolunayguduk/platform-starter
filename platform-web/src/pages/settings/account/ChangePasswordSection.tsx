@@ -1,8 +1,9 @@
 import { Typography, Divider, Form, Input, Button, App } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { useAuth } from '../../../auth/AuthContext.tsx';
-import { changePassword, type ChangePasswordFields } from '../../../api/profile.ts';
+import { useAuth } from '../../../store/AuthContext.tsx';
+import { changePassword } from '../../../api/profileApi.ts';
+import type { ChangePasswordFields } from '../../../types/profile.ts';
 import { ApiError } from '../../../api/client.ts';
 import layoutStyles from './profileLayout.module.css';
 

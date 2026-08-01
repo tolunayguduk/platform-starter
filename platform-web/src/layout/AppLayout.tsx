@@ -2,8 +2,8 @@ import type { CSSProperties } from 'react';
 import { Layout, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet } from 'react-router-dom';
-import { useThemeSettings } from '../theme/ThemeSettingsContext';
-import { getContrastOnColor } from '../theme/contrast';
+import { useThemeSettings } from '../store/ThemeSettingsContext';
+import { getContrastOnColor } from '../utils/contrast';
 import { UserMenu } from './UserMenu';
 import styles from './AppLayout.module.css';
 

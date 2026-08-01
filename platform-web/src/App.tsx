@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
-import { RequireAuth } from './auth/RequireAuth';
-import { RequireAdmin } from './auth/RequireAdmin';
+import { RequireAuth } from './components/RequireAuth';
+import { RequireAdmin } from './components/RequireAdmin';
 import { AppLayout } from './layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';

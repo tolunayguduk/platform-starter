@@ -1,13 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8081';
+import type { ApiErrorBody } from '../types/api';
 
-/** Shape of GlobalExceptionHandler's JSON error body (platform-error-starter). */
-export interface ApiErrorBody {
-  errorCode: string;
-  message: string;
-  timestamp: string;
-  traceId: string | null;
-  path: string;
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8081';
 
 export class ApiError extends Error {
   status: number;

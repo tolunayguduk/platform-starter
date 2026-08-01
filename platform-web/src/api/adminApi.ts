@@ -1,23 +1,9 @@
 import { apiFetch } from './client';
-
-export interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  fullName: string | null;
-  status: string;
-  createdAt: string;
-  roles: string[];
-}
+import type { AdminTable, AdminTableRows, AdminAuditRows, AdminUserAuditEvent, StatsRange, RegistrationStatsPoint } from '../types/admin';
+import type { AdminRole, AdminUser } from '../types/admin';
 
 export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
   return apiFetch<AdminUser[]>('/api/admin/users', { accessToken });
-}
-
-export interface AdminRole {
-  name: string;
-  description: string | null;
-  enabled: boolean;
 }
 
 export function fetchAdminRoles(accessToken: string): Promise<AdminRole[]> {
@@ -83,43 +69,12 @@ export function updateUserStatus(accessToken: string, userId: string, enabled: b
   });
 }
 
-export interface AdminUserAuditEvent {
-  time: string;
-  operationType: string;
-  resourcePath: string;
-  representation: string | null;
-}
-
 export function fetchAdminUserAuditEvents(accessToken: string, userId: string): Promise<AdminUserAuditEvent[]> {
   return apiFetch<AdminUserAuditEvent[]>(`/api/admin/users/${userId}/audit`, { accessToken });
 }
 
-export type StatsRange = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
-
-export interface RegistrationStatsPoint {
-  bucket: string;
-  count: number;
-}
-
 export function fetchRegistrationStats(accessToken: string, range: StatsRange): Promise<RegistrationStatsPoint[]> {
   return apiFetch<RegistrationStatsPoint[]>(`/api/admin/stats/registrations?range=${range}`, { accessToken });
-}
-
-export interface AdminTable {
-  key: string;
-  hasAudit: boolean;
-  editableColumns: string[];
-}
-
-export interface AdminTableRows {
-  columns: string[];
-  primaryKeyColumn: string;
-  rows: Record<string, unknown>[];
-}
-
-export interface AdminAuditRows {
-  columns: string[];
-  rows: Record<string, unknown>[];
 }
 
 export function fetchAdminTables(accessToken: string): Promise<AdminTable[]> {

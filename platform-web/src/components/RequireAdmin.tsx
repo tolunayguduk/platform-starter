@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../store/AuthContext';
 
 /** Nest inside RequireAuth - assumes accessToken/isLoading are already handled there. */
 export function RequireAdmin({ children }: { children: ReactNode }) {

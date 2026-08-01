@@ -2,9 +2,9 @@ import type { CSSProperties } from 'react';
 import { Typography, Space } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useThemeSettings } from '../../theme/ThemeSettingsContext';
-import { THEME_COLORS } from '../../theme/themeColors';
-import { getContrastOnColor } from '../../theme/contrast';
+import { useThemeSettings } from '../../store/ThemeSettingsContext';
+import { THEME_COLORS } from '../../utils/themeColors';
+import { getContrastOnColor } from '../../utils/contrast';
 import styles from './ThemeSettingsTab.module.css';
 
 export function ThemeSettingsTab() {

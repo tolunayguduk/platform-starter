@@ -1,6 +1,6 @@
 import { Typography, Divider, Table } from 'antd';
 import { useTranslation } from 'react-i18next';
-import type { Consent } from '../../../api/profile.ts';
+import type { Consent } from '../../../types/profile.ts';
 
 export function ConsentHistorySection({ consents }: { consents: Consent[] }) {
   const { t } = useTranslation();
