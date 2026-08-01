@@ -21,6 +21,10 @@
         </dependency>
         <dependency>
             <groupId>com.platform</groupId>
+            <artifactId>module-post</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.platform</groupId>
             <artifactId>platform-observability-starter</artifactId>
         </dependency>
         <dependency>

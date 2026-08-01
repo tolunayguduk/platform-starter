@@ -51,6 +51,7 @@
 
         <!-- business modules -->
         <module>module-user</module>
+        <module>module-post</module>
 
         <!-- the actual runnable application -->
         <module>platform-app</module>

@@ -6,7 +6,9 @@ services:
     container_name: platform-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: platform
+      # module-user's schema - every module-* after it gets its own schema, created by
+      # docker/mysql/init-schemas.sql (see that file's comment for why it's split this way).
+      MYSQL_DATABASE: platform_user
       MYSQL_USER: ${MYSQL_USER:-platform_app}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
@@ -14,6 +16,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
       interval: 10s

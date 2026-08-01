@@ -159,7 +159,8 @@ platform-parent                  (root POM - build/versiyon ayarları)
 ├── platform-security-starter    (Keycloak JWT resource server + MatrixPermissionEvaluator)
 ├── platform-observability-starter (correlation id / MDC, Actuator, Prometheus)
 ├── platform-cache-starter       (Redis + config-driven TTL, @Cacheable hazır)
-├── module-user                  (GDPR-kategorili user tabloları + rol/yetki matrisi)
+├── module-user                  (GDPR-kategorili user tabloları + rol/yetki matrisi; şema: platform_user)
+├── module-post                  (henüz boş iskelet - bkz. "Yeni bir modül eklemek"; şema: platform_post)
 └── platform-app                 (çalıştırılabilir Spring Boot uygulaması, saf REST API)
 
 platform-web                     (Maven reactor'ın DIŞINDA, ayrı bir React/Vite SPA - bkz. aşağı)
@@ -168,6 +169,13 @@ platform-web                     (Maven reactor'ın DIŞINDA, ayrı bir React/Vi
 Her `platform-*` starter bağımsız bir Maven modülü — micro mimariye geçişte bunları bir
 internal artifact repository'ye (`mvn deploy`) yayınlayıp, her mikroservisin `pom.xml`'ine normal
 bir dependency olarak eklemeniz yeterli. Kod tekrarı sıfır.
+
+Aynı mantık veritabanı seviyesinde de var: her `module-*` **kendi MySQL şemasına** sahip
+(`module-user` → `platform_user`, `module-post` → `platform_post`, ...), hepsi bugün aynı MySQL
+sunucusuna/bağlantısına gitse bile. Hiçbir tablo şema sınırını geçmez, hiçbir modül başka bir
+modülün tablosuna JOIN atmaz - bu sayede bir modül günün birinde kendi DataSource'una (hatta kendi
+DB sunucusuna) taşınırken veri taşıma projesi gerekmez, sadece bağlantı bilgisi değişir. Bkz.
+"Yeni bir modül eklemek" ve `docker/mysql/init-schemas.sql`.
 
 `platform-app` artık hiç HTML render etmiyor — sadece `/api/auth/*` (login/register/refresh/logout)
 ve `/api/me`, `/api/me/ui-permissions` gibi JSON endpoint'leri sunan bir REST API. Tüm arayüz
@@ -239,7 +247,11 @@ statik rol adı bile yok — admin panelinin düzenleyebileceği rol listesi
 | SSO session / refresh token durumu | Keycloak'ın kendi internal veritabanı | Uygulamanın hiçbir tablosunda karşılığı yok |
 | Sosyal login federasyonu (Google/GitHub/Facebook) | Keycloak identity provider config | `docker/keycloak/realm-platform.json` → `identityProviders` (şu an `enabled: false`) |
 
-### 2) MySQL (`platform` veritabanı) — sadece bu uygulamanın sahip olduğu veri: GDPR kategorileri, yetki matrisi, audit
+### 2) MySQL (`platform_user` şeması) — sadece bu uygulamanın sahip olduğu veri: GDPR kategorileri, yetki matrisi, audit
+
+Aşağıdaki tablolar `module-user`'a ait ve `platform_user` şemasında yaşıyor - `module-post` (ya da
+eklenecek başka bir `module-*`) kendi tablolarını asla bu şemaya değil, kendi şemasına
+(`platform_post`) yazar. Bkz. az önceki not.
 
 Kimlik için ayrı bir tablo **yok** — `user_core` kaldırıldı (V10 migration). Aşağıdaki tablolar
 kullanıcıyı doğrudan Keycloak'ın `sub` id'siyle (`keycloak_user_id` kolonu) referanslar.
@@ -319,12 +331,20 @@ bilgilerinin merkezi saklama yeri.
 
 ## Yeni bir modül eklemek
 
+`module-post` tam olarak bu adımların canlı örneği - şu an boş bir iskelet (`pom.xml` + paket
+yapısı, hiç entity/migration yok), "içini doldurmak" bundan sonraki adımlar.
+
 1. `module-<isim>` adında yeni bir Maven modülü aç, `platform-parent`'a `<parent>` yap
 2. İhtiyaç duyduğu `platform-*` starter'ları dependency olarak ekle; MapStruct kullanacaksan
    `mapstruct`/`mapstruct-processor` dependency'lerini ve `annotationProcessorPaths` konfigürasyonunu
    da ekle (yukarıdaki "Katmanlı paket yapısı" bölümündeki not)
-3. Yukarıdaki "Katmanlı paket yapısı"nı izle: `entity/repository/constant/controller(+model)/
+3. Kendi MySQL şemasını aç: `platform_<isim>` (bkz. `docker/mysql/init-schemas.sql`'e bir
+   `CREATE DATABASE IF NOT EXISTS platform_<isim>` + `GRANT` satırı ekle) - migration'larını asla
+   `platform_user`'a değil, kendi şemasına yaz. Yerel geliştirmede hâlâ tek `DataSource`/tek
+   Spring Boot süreci üzerinden gidiyoruz; şema ayrımı, ileride bu modülü kendi DataSource'una (ya
+   da kendi DB sunucusuna) taşırken veri taşıma projesi gerekmemesi için
+4. Yukarıdaki "Katmanlı paket yapısı"nı izle: `entity/repository/constant/controller(+model)/
    service(+model)/mapper`
-4. Entity'lerini `@Audited` işaretle (otomatik olarak Envers'e dahil olur)
-5. Kritik endpoint'lerini `@PreAuthorize("hasPermission('<resource>', '<action>')")` ile koru
-6. `platform-app/pom.xml`'e yeni modülü dependency olarak ekle
+5. Entity'lerini `@Audited` işaretle (otomatik olarak Envers'e dahil olur)
+6. Kritik endpoint'lerini `@PreAuthorize("hasPermission('<resource>', '<action>')")` ile koru
+7. `platform-app/pom.xml`'e yeni modülü dependency olarak ekle

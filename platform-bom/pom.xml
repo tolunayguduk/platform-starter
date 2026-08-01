@@ -65,6 +65,11 @@
                 <artifactId>module-user</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.platform</groupId>
+                <artifactId>module-post</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.mapstruct</groupId>

@@ -12,9 +12,9 @@
         <module name="platform-observability-starter" />
         <module name="platform-audit-spring-boot-starter" />
         <module name="platform-error-spring-boot-starter" />
-        <module name="platform-cache-spring-boot-starter" />
         <module name="platform-security-starter" />
         <module name="platform-error-starter" />
+        <module name="platform-cache-spring-boot-starter" />
         <module name="platform-cache-starter" />
         <module name="platform-security-spring-boot-starter" />
       </profile>
@@ -27,12 +27,14 @@
         </processorPath>
         <module name="module-user" />
         <module name="platform-app" />
+        <module name="module-post" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="app" options="-parameters" />
+      <module name="module-post" options="-parameters" />
       <module name="module-user" options="-parameters" />
       <module name="platform-app" options="-parameters" />
       <module name="platform-audit-spring-boot-starter" options="-parameters" />

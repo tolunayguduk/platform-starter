@@ -10,11 +10,13 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>module-user</artifactId>
-    <name>module-user</name>
+    <artifactId>module-post</artifactId>
+    <name>module-post</name>
     <description>
-        Owns identity cache (mirrors Keycloak), GDPR-categorized user data tables,
-        and the role/permission matrix. Example of a business module built on the platform-* starters.
+        Empty skeleton for a second business module - proves the module-per-schema boundary
+        (own MySQL schema: platform_post, see docker/mysql/init-schemas.sql) before any code
+        lives here. Follow README.md's "Yeni bir modül eklemek" to fill it in: entity/repository/
+        constant/controller(+model)/service(+model)/mapper, same shape as module-user.
     </description>
 
     <dependencies>
@@ -77,15 +79,8 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <!--
-                Lets you run migrations WITHOUT booting the whole Spring Boot app
-                (which would also need Keycloak/Redis up). Local dev defaults point at the
-                docker-compose mysql service; override with -D flags for other environments.
-
-                Usage:
-                  docker compose up -d mysql
-                  mvn -pl module-user flyway:migrate
-            -->
+            <!-- Same standalone-migration convenience as module-user - see that pom for the
+                 "why" comment (mixing flyway-core generations on the plugin's classloader). -->
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
@@ -99,10 +94,6 @@
                     </locations>
                 </configuration>
                 <dependencies>
-                    <!-- Must match Spring Boot's own managed flyway-core/mysql-connector-j versions -
-                         mixing flyway-core generations on the plugin's classloader throws
-                         IncompatibleClassChangeError (FlywayTelemetryManager changed class->interface
-                         between 10.x and 12.x). -->
                     <dependency>
                         <groupId>org.flywaydb</groupId>
                         <artifactId>flyway-mysql</artifactId>
@@ -119,7 +110,7 @@
     </build>
 
     <properties>
-        <flyway.url>jdbc:mysql://localhost:3306/platform_user</flyway.url>
+        <flyway.url>jdbc:mysql://localhost:3306/platform_post</flyway.url>
         <flyway.user>platform_app</flyway.user>
         <flyway.password>changeme</flyway.password>
     </properties>

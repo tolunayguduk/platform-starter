@@ -16,7 +16,11 @@ spring:
         default-context: platform-app
 
   datasource:
-    url: jdbc:mysql://localhost:3306/platform?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    # Each module-* owns its own schema (module-user -> platform_user, module-post -> platform_post,
+    # etc.) even though today they all still run through this one connection/JVM - the point is that
+    # a table never crosses that boundary, so a module can be pointed at its own DataSource (or its
+    # own database server entirely) later without a data migration.
+    url: jdbc:mysql://localhost:3306/platform_user?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
     username: ${DB_USERNAME:platform_app}
     password: ${DB_PASSWORD:changeme}   # overridden by Vault in real environments
 
@@ -106,7 +110,7 @@ spring:
     activate:
       on-profile: docker
   datasource:
-    url: jdbc:mysql://mysql:3306/platform?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    url: jdbc:mysql://mysql:3306/platform_user?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
   data:
     redis:
       host: redis
