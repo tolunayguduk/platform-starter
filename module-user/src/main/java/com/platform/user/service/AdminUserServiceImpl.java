@@ -2,12 +2,15 @@ package com.platform.user.service;
 
 import com.platform.error.BusinessException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
+import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.entity.UserProfile;
 import com.platform.user.repository.UserProfileRepository;
+import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
+import com.platform.user.service.model.UpdateUserIdentityCommand;
 import com.platform.user.service.model.UpdateUserRolesCommand;
 import org.springframework.stereotype.Service;
 
@@ -91,6 +94,30 @@ public class AdminUserServiceImpl implements AdminUserService {
                 keycloakAdminClient.removeRealmRole(keycloakUserId, role);
             }
         }
+    }
+
+    @Override
+    public void updateUserIdentity(UpdateUserIdentityCommand command) {
+        if (isBlank(command.username()) || isBlank(command.email())) {
+            throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Required field missing");
+        }
+        if (!command.email().contains("@")) {
+            throw new BusinessException("COMMON-4002", "error.profile.invalid_email", "Invalid email: " + command.email());
+        }
+        keycloakAdminClient.updateUserIdentity(command.keycloakUserId(), command.username(), command.email());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    @Override
+    public List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId) {
+        List<AdminEvent> events = keycloakAdminClient.getUserAdminEvents(keycloakUserId);
+        return events.stream()
+                .map(e -> new AdminUserAuditEventResult(
+                        Instant.ofEpochMilli(e.time()), e.operationType(), e.resourcePath(), e.representation()))
+                .toList();
     }
 
     @Override

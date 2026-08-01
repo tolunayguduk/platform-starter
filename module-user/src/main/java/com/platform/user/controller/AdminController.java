@@ -6,9 +6,11 @@ import com.platform.user.controller.model.AdminAuditRowsDto;
 import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
+import com.platform.user.controller.model.AdminUserAuditEventDto;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
+import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -35,6 +37,14 @@ public interface AdminController {
     @PutMapping("/users/{id}/roles")
     void updateUserRoles(@PathVariable String id, @RequestBody UpdateUserRolesRequestDto request,
                           @AuthenticationPrincipal Jwt jwt);
+
+    /** Username/email edit - routed straight through to Keycloak, never persisted locally. */
+    @PutMapping("/users/{id}/identity")
+    void updateUserIdentity(@PathVariable String id, @RequestBody UpdateUserIdentityRequestDto request);
+
+    /** This user's audit trail, sourced from Keycloak's own admin event log. */
+    @GetMapping("/users/{id}/audit")
+    List<AdminUserAuditEventDto> getUserAuditEvents(@PathVariable String id);
 
     @GetMapping("/stats/registrations")
     List<RegistrationStatsPointDto> registrationStats(@RequestParam StatsRange range);

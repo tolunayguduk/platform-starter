@@ -22,6 +22,29 @@ export function updateUserRoles(accessToken: string, userId: string, roles: stri
   });
 }
 
+export function updateUserIdentity(
+  accessToken: string,
+  userId: string,
+  identity: { username: string; email: string },
+): Promise<void> {
+  return apiFetch<void>(`/api/admin/users/${userId}/identity`, {
+    method: 'PUT',
+    body: identity,
+    accessToken,
+  });
+}
+
+export interface AdminUserAuditEvent {
+  time: string;
+  operationType: string;
+  resourcePath: string;
+  representation: string | null;
+}
+
+export function fetchAdminUserAuditEvents(accessToken: string, userId: string): Promise<AdminUserAuditEvent[]> {
+  return apiFetch<AdminUserAuditEvent[]>(`/api/admin/users/${userId}/audit`, { accessToken });
+}
+
 export type StatsRange = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 export interface RegistrationStatsPoint {

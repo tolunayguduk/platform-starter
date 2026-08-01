@@ -1,8 +1,10 @@
 package com.platform.user.service;
 
 import com.platform.user.constant.StatsRange;
+import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
+import com.platform.user.service.model.UpdateUserIdentityCommand;
 import com.platform.user.service.model.UpdateUserRolesCommand;
 
 import java.util.List;
@@ -18,6 +20,14 @@ public interface AdminUserService {
     List<AdminUserResult> listUsers();
 
     void updateUserRoles(UpdateUserRolesCommand command);
+
+    /** Admin-panel edit of username/email - still routed straight through to Keycloak,
+     * never persisted locally, same as everything else in this service. */
+    void updateUserIdentity(UpdateUserIdentityCommand command);
+
+    /** Audit trail for this user's identity/role changes, sourced from Keycloak's own admin
+     * event log rather than any local table. */
+    List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId);
 
     List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range);
 }

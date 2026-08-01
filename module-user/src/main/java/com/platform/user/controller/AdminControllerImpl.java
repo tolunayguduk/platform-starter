@@ -6,14 +6,17 @@ import com.platform.user.controller.model.AdminAuditRowsDto;
 import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
+import com.platform.user.controller.model.AdminUserAuditEventDto;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
+import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.mapper.AdminTableMapper;
 import com.platform.user.mapper.AdminUserMapper;
 import com.platform.user.service.AdminTableService;
 import com.platform.user.service.AdminUserService;
+import com.platform.user.service.model.UpdateUserIdentityCommand;
 import com.platform.user.service.model.UpdateUserRolesCommand;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -46,6 +49,16 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public void updateUserRoles(String id, UpdateUserRolesRequestDto request, Jwt jwt) {
         adminUserService.updateUserRoles(new UpdateUserRolesCommand(id, request.roles(), jwt.getSubject()));
+    }
+
+    @Override
+    public void updateUserIdentity(String id, UpdateUserIdentityRequestDto request) {
+        adminUserService.updateUserIdentity(new UpdateUserIdentityCommand(id, request.username(), request.email()));
+    }
+
+    @Override
+    public List<AdminUserAuditEventDto> getUserAuditEvents(String id) {
+        return adminUserMapper.toAuditEventDtoList(adminUserService.getUserAuditEvents(id));
     }
 
     @Override

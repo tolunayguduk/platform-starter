@@ -1,7 +1,9 @@
 package com.platform.user.mapper;
 
+import com.platform.user.controller.model.AdminUserAuditEventDto;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
+import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
 import org.mapstruct.Mapper;
@@ -21,4 +23,8 @@ public interface AdminUserMapper {
     public RegistrationStatsPointDto toDto(RegistrationStatsPointResult result);
 
     public List<RegistrationStatsPointDto> toStatsDtoList(List<RegistrationStatsPointResult> results);
+
+    public AdminUserAuditEventDto toDto(AdminUserAuditEventResult result);
+
+    public List<AdminUserAuditEventDto> toAuditEventDtoList(List<AdminUserAuditEventResult> results);
 }

@@ -6,6 +6,9 @@
   "loginWithEmailAllowed": true,
   "resetPasswordAllowed": true,
 
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+
   "bruteForceProtected": true,
   "failureFactor": 5,
   "waitIncrementSeconds": 60,
@@ -76,7 +79,7 @@
       "enabled": true,
       "serviceAccountClientId": "platform-app-admin",
       "clientRoles": {
-        "realm-management": ["manage-users", "view-realm"]
+        "realm-management": ["manage-users", "view-realm", "view-events"]
       }
     }
   ],

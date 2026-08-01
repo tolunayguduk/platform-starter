@@ -2,6 +2,7 @@ package com.platform.security.integration.keycloak;
 
 import com.platform.error.BusinessException;
 import com.platform.error.TechnicalException;
+import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
 import com.platform.security.integration.keycloak.model.KeycloakUser;
 import com.platform.security.integration.keycloak.model.KeycloakUserId;
@@ -30,6 +31,9 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     /** A single unpaginated page size for listUsers(). Fine for a starter/demo realm; a deployment
      * with more users than this would need real first/max pagination against the Keycloak API. */
     private static final int MAX_USERS_PAGE_SIZE = 1000;
+
+    /** Same reasoning as MAX_USERS_PAGE_SIZE, applied to the admin-event log fetched per user. */
+    private static final int MAX_ADMIN_EVENTS_PAGE_SIZE = 200;
 
     private final RestClient restClient;
 
@@ -118,6 +122,23 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    public void updateUserIdentity(String keycloakUserId, String username, String email) {
+        Map<String, Object> body = Map.of("username", username, "email", email);
+        restClient.put().uri("/users/{id}", keycloakUserId)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    if (response.getStatusCode().value() == 409) {
+                        throw new BusinessException("AUTHZ-4092",
+                                "error.admin.identity_taken", "Keycloak rejected update - username or email already in use: " + username);
+                    }
+                    throw new TechnicalException("AUTHZ-4003",
+                            "Keycloak admin API rejected identity update: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
     public void resetPassword(String keycloakUserId, ResetPasswordRequest request) {
         Map<String, Object> body = Map.of("type", "password", "value", request.newPassword(), "temporary", false);
         restClient.put().uri("/users/{id}/reset-password", keycloakUserId)
@@ -186,6 +207,22 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
         return roles.stream()
                 .map(RealmRole::name)
                 .filter(KeycloakRoleMapper::isApplicationRole)
+                .toList();
+    }
+
+    @Override
+    public List<AdminEvent> getUserAdminEvents(String keycloakUserId) {
+        List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<AdminEvent>>() {
+                });
+        if (events == null) {
+            return List.of();
+        }
+        String userPathPrefix = "users/" + keycloakUserId;
+        return events.stream()
+                .filter(e -> e.resourcePath() != null && e.resourcePath().startsWith(userPathPrefix))
+                .sorted((a, b) -> Long.compare(b.time(), a.time()))
                 .toList();
     }
 }

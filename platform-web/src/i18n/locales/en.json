@@ -114,9 +114,8 @@
       "year": "1 Year"
     },
     "usersTitle": "Users",
+    "usersHint": "Click a row to expand it and see that user's identity/role audit history from Keycloak.",
     "you": "you",
-    "rolesUpdated": "Roles updated.",
-    "rolesUpdateError": "Failed to update roles.",
     "column": {
       "username": "Username",
       "fullName": "Full Name",
@@ -152,6 +151,26 @@
       "noChanges": "No changes were made.",
       "success": "Record updated.",
       "error": "Failed to update record."
+    },
+    "editUser": {
+      "title": "Edit User",
+      "confirmTitle": "Confirm Changes",
+      "fields": {
+        "username": "Username",
+        "email": "Email",
+        "roles": "Roles"
+      },
+      "selfRoleHint": "You cannot remove your own ADMIN role.",
+      "success": "User updated.",
+      "error": "Failed to update user."
+    },
+    "userAudit": {
+      "column": {
+        "time": "Time",
+        "operationType": "Operation",
+        "resourcePath": "Resource",
+        "representation": "Details"
+      }
     }
   },
   "notFound": {

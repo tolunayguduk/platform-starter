@@ -114,9 +114,8 @@
       "year": "1 Yıl"
     },
     "usersTitle": "Kullanıcılar",
+    "usersHint": "Bir satıra tıklayıp genişleterek o kullanıcının Keycloak'taki kimlik/rol audit geçmişini görebilirsiniz.",
     "you": "siz",
-    "rolesUpdated": "Roller güncellendi.",
-    "rolesUpdateError": "Roller güncellenemedi.",
     "column": {
       "username": "Kullanıcı Adı",
       "fullName": "Ad Soyad",
@@ -152,6 +151,26 @@
       "noChanges": "Herhangi bir değişiklik yapılmadı.",
       "success": "Kayıt güncellendi.",
       "error": "Kayıt güncellenemedi."
+    },
+    "editUser": {
+      "title": "Kullanıcıyı Düzenle",
+      "confirmTitle": "Değişiklikleri Onayla",
+      "fields": {
+        "username": "Kullanıcı Adı",
+        "email": "E-posta",
+        "roles": "Roller"
+      },
+      "selfRoleHint": "Kendi ADMIN rolünüzü kaldıramazsınız.",
+      "success": "Kullanıcı güncellendi.",
+      "error": "Kullanıcı güncellenemedi."
+    },
+    "userAudit": {
+      "column": {
+        "time": "Zaman",
+        "operationType": "İşlem",
+        "resourcePath": "Kaynak",
+        "representation": "Detay"
+      }
     }
   },
   "notFound": {

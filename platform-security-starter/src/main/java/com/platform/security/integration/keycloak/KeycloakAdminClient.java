@@ -1,5 +1,6 @@
 package com.platform.security.integration.keycloak;
 
+import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
 import com.platform.security.integration.keycloak.model.KeycloakUser;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
@@ -27,6 +28,9 @@ public interface KeycloakAdminClient {
     /** Partial update (only email/firstName/lastName are ever touched by this app). */
     void updateUser(String keycloakUserId, UpdateKeycloakUserRequest request);
 
+    /** Admin panel identity edit - the only place username is ever changed by this app. */
+    void updateUserIdentity(String keycloakUserId, String username, String email);
+
     /** Sets a new permanent (non-temporary) password directly - caller is responsible for verifying the old one first. */
     void resetPassword(String keycloakUserId, ResetPasswordRequest request);
 
@@ -51,4 +55,9 @@ public interface KeycloakAdminClient {
     /** Every realm role this application manages - Keycloak is the only place role names are
      * defined, so the admin panel's editable-role set is always exactly what the realm has. */
     List<String> listRealmRoles();
+
+    /** This user's admin-event history (identity edits, role-mapping changes) straight from
+     * Keycloak's own event log - requires {@code adminEventsEnabled} on the realm. This is the
+     * audit trail for Keycloak-owned data; nothing about it is ever cached locally. */
+    List<AdminEvent> getUserAdminEvents(String keycloakUserId);
 }
