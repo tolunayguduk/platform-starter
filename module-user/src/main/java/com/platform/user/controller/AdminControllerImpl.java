@@ -61,6 +61,11 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
+    public void deleteRole(String name) {
+        adminUserService.deleteRole(name);
+    }
+
+    @Override
     public void updateUserRoles(String id, UpdateUserRolesRequestDto request, Jwt jwt) {
         adminUserService.updateUserRoles(new UpdateUserRolesCommand(id, request.roles(), jwt.getSubject()));
     }

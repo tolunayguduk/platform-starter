@@ -239,6 +239,17 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    public void deleteRealmRole(String roleName) {
+        restClient.delete().uri("/roles/{roleName}", roleName)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4008",
+                            "Keycloak admin API rejected role deletion of " + roleName + ": HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
     public List<AdminEvent> getUserAdminEvents(String keycloakUserId) {
         List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
                 .retrieve()

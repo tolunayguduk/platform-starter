@@ -6,13 +6,16 @@ import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.RolePermissionRepository;
 import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
 import com.platform.user.service.model.UpdateUserIdentityCommand;
 import com.platform.user.service.model.UpdateUserRolesCommand;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -31,15 +34,24 @@ import java.util.stream.Collectors;
 @Service
 public class AdminUserServiceImpl implements AdminUserService {
 
+    /** Guards against deleting the one role this entire admin panel is gated on - would lock every
+     * admin out of ever managing roles/functions again, and Keycloak has no such safeguard itself. */
+    private static final String PROTECTED_ROLE = "ADMIN";
+
     private final UserProfileRepository userProfileRepository;
     private final KeycloakAdminClient keycloakAdminClient;
     private final UiPermissionsService uiPermissionsService;
+    private final RolePermissionRepository rolePermissionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AdminUserServiceImpl(UserProfileRepository userProfileRepository, KeycloakAdminClient keycloakAdminClient,
-                                 UiPermissionsService uiPermissionsService) {
+                                 UiPermissionsService uiPermissionsService, RolePermissionRepository rolePermissionRepository,
+                                 ApplicationEventPublisher eventPublisher) {
         this.userProfileRepository = userProfileRepository;
         this.keycloakAdminClient = keycloakAdminClient;
         this.uiPermissionsService = uiPermissionsService;
+        this.rolePermissionRepository = rolePermissionRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -77,6 +89,19 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Role name required");
         }
         keycloakAdminClient.createRealmRole(roleName);
+    }
+
+    @Override
+    @Transactional
+    public void deleteRole(String roleName) {
+        if (PROTECTED_ROLE.equals(roleName)) {
+            throw new BusinessException("USER-4004", "error.admin.protected_role", "Cannot delete the " + PROTECTED_ROLE + " role");
+        }
+        keycloakAdminClient.deleteRealmRole(roleName);
+        // Keycloak is the source of truth for the role itself, but role_permission is our own
+        // table - clean up its now-orphaned rows rather than leave dead grants nothing can reach.
+        rolePermissionRepository.deleteAll(rolePermissionRepository.findByRoleName(roleName));
+        eventPublisher.publishEvent(new RolePermissionsChangedEvent(roleName));
     }
 
     @Override

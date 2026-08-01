@@ -65,6 +65,10 @@ public interface KeycloakAdminClient {
      * only becomes assignable/manageable once it exists here, never as local metadata. */
     void createRealmRole(String roleName);
 
+    /** Deletes a realm role entirely. Any local role_permission rows referencing it become the
+     * caller's responsibility to clean up - this client has no knowledge of that table. */
+    void deleteRealmRole(String roleName);
+
     /** This user's admin-event history (identity edits, role-mapping changes) straight from
      * Keycloak's own event log - requires {@code adminEventsEnabled} on the realm. This is the
      * audit trail for Keycloak-owned data; nothing about it is ever cached locally. */

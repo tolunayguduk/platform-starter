@@ -28,6 +28,10 @@ public interface AdminUserService {
      * AdminTableService (ROLE_PERMISSION), never assigned to a user directly. */
     void createRole(String roleName);
 
+    /** Deletes a role entirely (rejects the one this admin panel itself is gated on) and cleans up
+     * its now-orphaned function grants. */
+    void deleteRole(String roleName);
+
     void updateUserRoles(UpdateUserRolesCommand command);
 
     /** Enable/disable the account - a disabled user cannot obtain a token from Keycloak at all.

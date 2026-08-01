@@ -49,6 +49,10 @@ public interface AdminController {
     @PostMapping("/roles")
     void createRole(@RequestBody CreateRoleRequestDto request);
 
+    /** Deletes a role entirely and cleans up its function grants. Rejects the ADMIN role. */
+    @DeleteMapping("/roles/{name}")
+    void deleteRole(@PathVariable String name);
+
     @PutMapping("/users/{id}/roles")
     void updateUserRoles(@PathVariable String id, @RequestBody UpdateUserRolesRequestDto request,
                           @AuthenticationPrincipal Jwt jwt);

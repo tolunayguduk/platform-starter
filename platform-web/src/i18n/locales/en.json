@@ -111,13 +111,14 @@
     },
     "roleFunctions": {
       "title": "Role-Function Management",
-      "hint": "Functions are granted through roles, not directly to a user - pick a role to manage exactly which functions it has.",
-      "rolePlaceholder": "Select a role",
-      "emptyState": "Select a role above to see and manage its functions.",
+      "hint": "Functions are granted through roles, not directly to a user - expand a role to manage exactly which functions it has.",
+      "searchRoles": "Search roles...",
+      "searchFunctions": "Search functions...",
+      "filterStatus": "Filter by status",
       "column": {
+        "role": "Role",
         "accessLevel": "Access"
       },
-      "notGranted": "Not configured",
       "accessLevel": {
         "GRANTED": "Visible, Clickable",
         "VISIBLE_DENIED": "Visible, Not Clickable",
@@ -126,19 +127,27 @@
       "granted": "Function granted.",
       "updated": "Access level updated.",
       "revoked": "Function revoked.",
+      "revokeAction": "Revoke",
+      "confirmRevoke": "Revoke this function from the role?",
       "error": "Failed to update the role's functions.",
+      "deleteRoleAction": "Delete",
+      "confirmDeleteRole": "Delete this role? This also removes all of its function grants.",
+      "roleDeleted": "Role deleted.",
+      "roleDeleteError": "Failed to delete role.",
       "newRole": {
         "title": "Define a new role",
         "placeholder": "Role name (e.g. SUPPORT)",
-        "button": "Create Role",
+        "button": "Add Role",
         "success": "Role created.",
         "error": "Failed to create role."
       },
       "newFunction": {
-        "title": "Define a new function",
+        "title": "Add a function",
+        "modeExisting": "Use existing function",
+        "modeNew": "Define new function",
         "keyPlaceholder": "Function key (e.g. report:export)",
         "uiPolicyPlaceholder": "Default when not configured for a role",
-        "button": "Create Function",
+        "button": "Add Function",
         "success": "Function created.",
         "error": "Failed to create function."
       },

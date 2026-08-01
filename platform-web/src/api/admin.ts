@@ -26,6 +26,13 @@ export function createAdminRole(accessToken: string, name: string): Promise<void
   });
 }
 
+export function deleteAdminRole(accessToken: string, name: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
 export function updateUserRoles(accessToken: string, userId: string, roles: string[]): Promise<void> {
   return apiFetch<void>(`/api/admin/users/${userId}/roles`, {
     method: 'PUT',

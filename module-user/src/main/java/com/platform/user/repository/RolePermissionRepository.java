@@ -23,4 +23,8 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
            "join fetch rp.permission " +
            "where rp.roleName in :roleNames and rp.accessLevel = com.platform.user.constant.AccessLevel.HIDDEN")
     List<RolePermission> findHiddenByRoleNames(Collection<String> roleNames);
+
+    /** Used when a role is deleted entirely - every grant referencing it would otherwise be an
+     * orphaned row nothing can ever read again (Keycloak has no matching role name anymore). */
+    List<RolePermission> findByRoleName(String roleName);
 }

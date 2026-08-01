@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Input, Select, Space, Table, Typography } from 'antd';
+import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
 import {
   createAdminRole,
   createAdminTableRow,
+  deleteAdminRole,
   deleteAdminTableRow,
   fetchAdminRoles,
   fetchAdminTableRows,
@@ -18,11 +19,315 @@ const ACCESS_LEVEL_OPTIONS = ['GRANTED', 'VISIBLE_DENIED', 'HIDDEN'];
 // A new function's fallback behavior for any role that has no explicit status set - see UiPolicy.
 const UI_POLICY_OPTIONS = ['HIDE_IF_DENIED', 'DISABLE_IF_DENIED'];
 
-interface FunctionRow {
+// The role every admin action in this app is gated on - deleting it would lock everyone out of
+// ever managing roles/functions again. Rejected server-side too; disabled here for a clearer UX.
+const PROTECTED_ROLE = 'ADMIN';
+
+interface PermissionCatalogEntry {
+  id: number;
+  key: string;
+}
+
+interface FunctionGrantRow {
+  grantId: string;
   permissionId: number;
   functionKey: string;
-  grantId: string | null;
-  accessLevel: string | null;
+  accessLevel: string;
+}
+
+function AddRoleModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
+  const { message } = App.useApp();
+  const { accessToken } = useAuth();
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+
+  function handleClose() {
+    form.resetFields();
+    onClose();
+  }
+
+  async function handleSubmit() {
+    if (!accessToken) return;
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      await createAdminRole(accessToken, values.name.trim());
+      message.success(t('admin.roleFunctions.newRole.success'));
+      handleClose();
+      onCreated();
+    } catch (e) {
+      message.error(
+        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.newRole.error')) : t('admin.roleFunctions.newRole.error'),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title={t('admin.roleFunctions.newRole.title')}
+      onCancel={handleClose}
+      onOk={handleSubmit}
+      confirmLoading={saving}
+      destroyOnHidden
+    >
+      <Form form={form} layout="vertical">
+        <Form.Item name="name" label={t('admin.roleFunctions.newRole.placeholder')} rules={[{ required: true, whitespace: true }]}>
+          <Input placeholder={t('admin.roleFunctions.newRole.placeholder')} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+interface AddFunctionModalProps {
+  open: boolean;
+  role: string;
+  catalog: PermissionCatalogEntry[];
+  alreadyGrantedPermissionIds: Set<number>;
+  onClose: () => void;
+  onCreated: () => void;
+}
+
+function AddFunctionModal({ open, role, catalog, alreadyGrantedPermissionIds, onClose, onCreated }: AddFunctionModalProps) {
+  const { t } = useTranslation();
+  const { message } = App.useApp();
+  const { accessToken } = useAuth();
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+
+  const availableCatalog = catalog.filter((p) => !alreadyGrantedPermissionIds.has(p.id));
+
+  function handleClose() {
+    form.resetFields();
+    setMode('existing');
+    onClose();
+  }
+
+  async function handleSubmit() {
+    if (!accessToken) return;
+    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      let permissionId: number;
+      if (mode === 'existing') {
+        permissionId = values.permissionId;
+      } else {
+        const created = await createAdminTableRow(accessToken, 'PERMISSION', {
+          key: values.key.trim(),
+          ui_policy: values.uiPolicy,
+        });
+        permissionId = Number(created.id);
+      }
+      await createAdminTableRow(accessToken, 'ROLE_PERMISSION', {
+        role_name: role,
+        permission_id: permissionId,
+        access_level: values.accessLevel,
+      });
+      message.success(t('admin.roleFunctions.granted'));
+      handleClose();
+      onCreated();
+    } catch (e) {
+      message.error(
+        e instanceof ApiError
+          ? (e.body?.message ?? t('admin.roleFunctions.newFunction.error'))
+          : t('admin.roleFunctions.newFunction.error'),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      title={t('admin.roleFunctions.newFunction.title')}
+      onCancel={handleClose}
+      onOk={handleSubmit}
+      confirmLoading={saving}
+      destroyOnHidden
+    >
+      <Space style={{ marginBottom: 16 }}>
+        <Button type={mode === 'existing' ? 'primary' : 'default'} onClick={() => setMode('existing')}>
+          {t('admin.roleFunctions.newFunction.modeExisting')}
+        </Button>
+        <Button type={mode === 'new' ? 'primary' : 'default'} onClick={() => setMode('new')}>
+          {t('admin.roleFunctions.newFunction.modeNew')}
+        </Button>
+      </Space>
+      <Form form={form} layout="vertical" initialValues={{ accessLevel: 'GRANTED' }}>
+        {mode === 'existing' ? (
+          <Form.Item name="permissionId" label={t('admin.functionAccess.column.function')} rules={[{ required: true }]}>
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder={t('admin.roleFunctions.newFunction.keyPlaceholder')}
+              options={availableCatalog.map((p) => ({ value: p.id, label: p.key }))}
+            />
+          </Form.Item>
+        ) : (
+          <>
+            <Form.Item name="key" label={t('admin.roleFunctions.newFunction.keyPlaceholder')} rules={[{ required: true, whitespace: true }]}>
+              <Input placeholder={t('admin.roleFunctions.newFunction.keyPlaceholder')} />
+            </Form.Item>
+            <Form.Item name="uiPolicy" label={t('admin.roleFunctions.newFunction.uiPolicyPlaceholder')} rules={[{ required: true }]}>
+              <Select options={UI_POLICY_OPTIONS.map((policy) => ({ value: policy, label: t(`admin.roleFunctions.uiPolicy.${policy}`) }))} />
+            </Form.Item>
+          </>
+        )}
+        <Form.Item name="accessLevel" label={t('admin.roleFunctions.column.accessLevel')} rules={[{ required: true }]}>
+          <Select options={ACCESS_LEVEL_OPTIONS.map((level) => ({ value: level, label: t(`admin.roleFunctions.accessLevel.${level}`) }))} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+function RoleFunctionsPanel({ role }: { role: string }) {
+  const { t } = useTranslation();
+  const { message } = App.useApp();
+  const { accessToken } = useAuth();
+  const [catalog, setCatalog] = useState<PermissionCatalogEntry[]>([]);
+  const [grants, setGrants] = useState<FunctionGrantRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  function loadData() {
+    if (!accessToken) return;
+    setLoading(true);
+    Promise.all([fetchAdminTableRows(accessToken, 'PERMISSION'), fetchAdminTableRows(accessToken, 'ROLE_PERMISSION')])
+      .then(([permissions, rolePermissions]) => {
+        const catalogEntries = permissions.rows.map((p) => ({ id: Number(p.id), key: String(p.key) }));
+        setCatalog(catalogEntries);
+        const catalogById = new Map(catalogEntries.map((p) => [p.id, p]));
+        const grantRows = rolePermissions.rows
+          .filter((r) => r.role_name === role)
+          .map((r) => {
+            const permissionId = Number(r.permission_id);
+            return {
+              grantId: String(r.id),
+              permissionId,
+              functionKey: catalogById.get(permissionId)?.key ?? `#${permissionId}`,
+              accessLevel: String(r.access_level),
+            };
+          })
+          .sort((a, b) => a.functionKey.localeCompare(b.functionKey));
+        setGrants(grantRows);
+      })
+      .finally(() => setLoading(false));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(loadData, [accessToken, role]);
+
+  const visibleGrants = grants.filter(
+    (g) => g.functionKey.toLowerCase().includes(search.toLowerCase()) && (statusFilter === undefined || g.accessLevel === statusFilter),
+  );
+
+  async function handleAccessLevelChange(grant: FunctionGrantRow, accessLevel: string) {
+    if (!accessToken) return;
+    setSavingId(grant.grantId);
+    try {
+      await updateAdminTableRow(accessToken, 'ROLE_PERMISSION', grant.grantId, { access_level: accessLevel });
+      message.success(t('admin.roleFunctions.updated'));
+      loadData();
+    } catch (e) {
+      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.error')) : t('admin.roleFunctions.error'));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleRevoke(grant: FunctionGrantRow) {
+    if (!accessToken) return;
+    setSavingId(grant.grantId);
+    try {
+      await deleteAdminTableRow(accessToken, 'ROLE_PERMISSION', grant.grantId);
+      message.success(t('admin.roleFunctions.revoked'));
+      loadData();
+    } catch (e) {
+      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.error')) : t('admin.roleFunctions.error'));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <div>
+      <Space style={{ marginBottom: 12 }} wrap>
+        <Input.Search
+          style={{ width: 240 }}
+          allowClear
+          placeholder={t('admin.roleFunctions.searchFunctions')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select
+          style={{ width: 220 }}
+          allowClear
+          placeholder={t('admin.roleFunctions.filterStatus')}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={ACCESS_LEVEL_OPTIONS.map((level) => ({ value: level, label: t(`admin.roleFunctions.accessLevel.${level}`) }))}
+        />
+        <Button type="primary" onClick={() => setAddModalOpen(true)}>
+          {t('admin.roleFunctions.newFunction.button')}
+        </Button>
+      </Space>
+      <Table
+        size="small"
+        rowKey="grantId"
+        loading={loading}
+        dataSource={visibleGrants}
+        pagination={false}
+        columns={[
+          { title: t('admin.functionAccess.column.function'), dataIndex: 'functionKey' },
+          {
+            title: t('admin.roleFunctions.column.accessLevel'),
+            key: 'accessLevel',
+            render: (_: unknown, grant: FunctionGrantRow) => (
+              <Select
+                style={{ width: 220 }}
+                loading={savingId === grant.grantId}
+                value={grant.accessLevel}
+                onChange={(value) => handleAccessLevelChange(grant, value)}
+                options={ACCESS_LEVEL_OPTIONS.map((level) => ({ value: level, label: t(`admin.roleFunctions.accessLevel.${level}`) }))}
+              />
+            ),
+          },
+          {
+            title: t('admin.editRow.actionsColumn'),
+            key: 'actions',
+            render: (_: unknown, grant: FunctionGrantRow) => (
+              <Popconfirm title={t('admin.roleFunctions.confirmRevoke')} onConfirm={() => handleRevoke(grant)}>
+                <Button size="small" danger loading={savingId === grant.grantId}>
+                  {t('admin.roleFunctions.revokeAction')}
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ]}
+      />
+      <AddFunctionModal
+        open={addModalOpen}
+        role={role}
+        catalog={catalog}
+        alreadyGrantedPermissionIds={new Set(grants.map((g) => g.permissionId))}
+        onClose={() => setAddModalOpen(false)}
+        onCreated={() => {
+          setAddModalOpen(false);
+          loadData();
+        }}
+      />
+    </div>
+  );
 }
 
 /** Functions are managed through roles, not per user - a user's roles determine their functions,
@@ -32,207 +337,88 @@ export function RoleFunctionManager() {
   const { message } = App.useApp();
   const { accessToken } = useAuth();
   const [roles, setRoles] = useState<string[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [rows, setRows] = useState<FunctionRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [newRoleName, setNewRoleName] = useState('');
-  const [creatingRole, setCreatingRole] = useState(false);
-  const [newFunctionKey, setNewFunctionKey] = useState('');
-  const [newFunctionUiPolicy, setNewFunctionUiPolicy] = useState<string | undefined>(undefined);
-  const [creatingFunction, setCreatingFunction] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [roleSearch, setRoleSearch] = useState('');
+  const [addRoleModalOpen, setAddRoleModalOpen] = useState(false);
+  const [deletingRole, setDeletingRole] = useState<string | null>(null);
 
   function loadRoles() {
-    if (!accessToken) return Promise.resolve();
-    return fetchAdminRoles(accessToken).then(setRoles);
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadRoles(); }, [accessToken]);
-
-  function loadRows() {
-    if (!accessToken || !selectedRole) {
-      setRows([]);
-      return;
-    }
+    if (!accessToken) return;
     setLoading(true);
-    Promise.all([fetchAdminTableRows(accessToken, 'PERMISSION'), fetchAdminTableRows(accessToken, 'ROLE_PERMISSION')])
-      .then(([permissions, rolePermissions]) => {
-        const grantsByPermissionId = new Map(
-          rolePermissions.rows
-            .filter((row) => row.role_name === selectedRole)
-            .map((row) => [Number(row.permission_id), row]),
-        );
-        const merged = permissions.rows
-          .map((permission) => {
-            const permissionId = Number(permission.id);
-            const grant = grantsByPermissionId.get(permissionId);
-            return {
-              permissionId,
-              functionKey: String(permission.key),
-              grantId: grant ? String(grant.id) : null,
-              accessLevel: grant ? String(grant.access_level) : null,
-            };
-          })
-          .sort((a, b) => a.functionKey.localeCompare(b.functionKey));
-        setRows(merged);
-      })
+    fetchAdminRoles(accessToken)
+      .then(setRoles)
       .finally(() => setLoading(false));
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(loadRows, [accessToken, selectedRole]);
+  useEffect(loadRoles, [accessToken]);
 
-  async function handleCreateRole() {
-    const name = newRoleName.trim();
-    if (!accessToken || !name) return;
-    setCreatingRole(true);
+  async function handleDeleteRole(role: string) {
+    if (!accessToken) return;
+    setDeletingRole(role);
     try {
-      await createAdminRole(accessToken, name);
-      message.success(t('admin.roleFunctions.newRole.success'));
-      await loadRoles();
-      setSelectedRole(name);
-      setNewRoleName('');
+      await deleteAdminRole(accessToken, role);
+      message.success(t('admin.roleFunctions.roleDeleted'));
+      loadRoles();
     } catch (e) {
       message.error(
-        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.newRole.error')) : t('admin.roleFunctions.newRole.error'),
+        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.roleDeleteError')) : t('admin.roleFunctions.roleDeleteError'),
       );
     } finally {
-      setCreatingRole(false);
+      setDeletingRole(null);
     }
   }
 
-  async function handleCreateFunction() {
-    const key = newFunctionKey.trim();
-    if (!accessToken || !key || !newFunctionUiPolicy) return;
-    setCreatingFunction(true);
-    try {
-      await createAdminTableRow(accessToken, 'PERMISSION', { key, ui_policy: newFunctionUiPolicy });
-      message.success(t('admin.roleFunctions.newFunction.success'));
-      setNewFunctionKey('');
-      setNewFunctionUiPolicy(undefined);
-      loadRows();
-    } catch (e) {
-      message.error(
-        e instanceof ApiError
-          ? (e.body?.message ?? t('admin.roleFunctions.newFunction.error'))
-          : t('admin.roleFunctions.newFunction.error'),
-      );
-    } finally {
-      setCreatingFunction(false);
-    }
-  }
-
-  async function handleAccessLevelChange(row: FunctionRow, accessLevel: string | undefined) {
-    if (!accessToken || !selectedRole) return;
-    setSavingId(row.permissionId);
-    try {
-      if (accessLevel === undefined) {
-        if (row.grantId) {
-          await deleteAdminTableRow(accessToken, 'ROLE_PERMISSION', row.grantId);
-          message.success(t('admin.roleFunctions.revoked'));
-        }
-      } else if (row.grantId) {
-        await updateAdminTableRow(accessToken, 'ROLE_PERMISSION', row.grantId, { access_level: accessLevel });
-        message.success(t('admin.roleFunctions.updated'));
-      } else {
-        await createAdminTableRow(accessToken, 'ROLE_PERMISSION', {
-          role_name: selectedRole,
-          permission_id: row.permissionId,
-          access_level: accessLevel,
-        });
-        message.success(t('admin.roleFunctions.granted'));
-      }
-      loadRows();
-    } catch (e) {
-      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.error')) : t('admin.roleFunctions.error'));
-    } finally {
-      setSavingId(null);
-    }
-  }
+  const visibleRoles = roles.filter((role) => role.toLowerCase().includes(roleSearch.toLowerCase())).map((role) => ({ role }));
 
   return (
     <Card title={t('admin.roleFunctions.title')}>
       <Typography.Paragraph type="secondary">{t('admin.roleFunctions.hint')}</Typography.Paragraph>
-
-      <Typography.Title level={5}>{t('admin.roleFunctions.newRole.title')}</Typography.Title>
-      <Space.Compact style={{ marginBottom: 24 }}>
-        <Input
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Input.Search
           style={{ width: 240 }}
-          placeholder={t('admin.roleFunctions.newRole.placeholder')}
-          value={newRoleName}
-          onChange={(e) => setNewRoleName(e.target.value)}
-          onPressEnter={handleCreateRole}
+          allowClear
+          placeholder={t('admin.roleFunctions.searchRoles')}
+          value={roleSearch}
+          onChange={(e) => setRoleSearch(e.target.value)}
         />
-        <Button type="primary" loading={creatingRole} disabled={!newRoleName.trim()} onClick={handleCreateRole}>
+        <Button type="primary" onClick={() => setAddRoleModalOpen(true)}>
           {t('admin.roleFunctions.newRole.button')}
         </Button>
-      </Space.Compact>
-
-      <Typography.Title level={5}>{t('admin.roleFunctions.newFunction.title')}</Typography.Title>
-      <Space style={{ marginBottom: 24 }} wrap>
-        <Input
-          style={{ width: 240 }}
-          placeholder={t('admin.roleFunctions.newFunction.keyPlaceholder')}
-          value={newFunctionKey}
-          onChange={(e) => setNewFunctionKey(e.target.value)}
-        />
-        <Select
-          style={{ width: 220 }}
-          placeholder={t('admin.roleFunctions.newFunction.uiPolicyPlaceholder')}
-          value={newFunctionUiPolicy}
-          onChange={setNewFunctionUiPolicy}
-          options={UI_POLICY_OPTIONS.map((policy) => ({ value: policy, label: t(`admin.roleFunctions.uiPolicy.${policy}`) }))}
-        />
-        <Button
-          type="primary"
-          loading={creatingFunction}
-          disabled={!newFunctionKey.trim() || !newFunctionUiPolicy}
-          onClick={handleCreateFunction}
-        >
-          {t('admin.roleFunctions.newFunction.button')}
-        </Button>
       </Space>
-
-      <Select
-        style={{ width: 240, marginBottom: 16 }}
-        placeholder={t('admin.roleFunctions.rolePlaceholder')}
-        value={selectedRole ?? undefined}
-        onChange={setSelectedRole}
-        options={roles.map((role) => ({ value: role, label: role }))}
+      <Table
+        rowKey="role"
+        loading={loading}
+        dataSource={visibleRoles}
+        pagination={false}
+        expandable={{ expandedRowRender: (record) => <RoleFunctionsPanel role={record.role} /> }}
+        columns={[
+          { title: t('admin.roleFunctions.column.role'), dataIndex: 'role' },
+          {
+            title: t('admin.editRow.actionsColumn'),
+            key: 'actions',
+            render: (_: unknown, record: { role: string }) => (
+              <Popconfirm
+                title={t('admin.roleFunctions.confirmDeleteRole')}
+                onConfirm={() => handleDeleteRole(record.role)}
+                disabled={record.role === PROTECTED_ROLE}
+              >
+                <Button size="small" danger disabled={record.role === PROTECTED_ROLE} loading={deletingRole === record.role}>
+                  {t('admin.roleFunctions.deleteRoleAction')}
+                </Button>
+              </Popconfirm>
+            ),
+          },
+        ]}
       />
-      {!selectedRole ? (
-        <Typography.Paragraph type="secondary">{t('admin.roleFunctions.emptyState')}</Typography.Paragraph>
-      ) : (
-        <Table
-          rowKey="permissionId"
-          loading={loading}
-          dataSource={rows}
-          pagination={false}
-          columns={[
-            { title: t('admin.functionAccess.column.function'), dataIndex: 'functionKey' },
-            {
-              title: t('admin.roleFunctions.column.accessLevel'),
-              key: 'accessLevel',
-              render: (_: unknown, row: FunctionRow) => (
-                <Select
-                  allowClear
-                  style={{ width: 220 }}
-                  placeholder={t('admin.roleFunctions.notGranted')}
-                  loading={savingId === row.permissionId}
-                  value={row.accessLevel ?? undefined}
-                  onChange={(value) => value && handleAccessLevelChange(row, value)}
-                  onClear={() => handleAccessLevelChange(row, undefined)}
-                  options={ACCESS_LEVEL_OPTIONS.map((level) => ({
-                    value: level,
-                    label: t(`admin.roleFunctions.accessLevel.${level}`),
-                  }))}
-                />
-              ),
-            },
-          ]}
-        />
-      )}
+      <AddRoleModal
+        open={addRoleModalOpen}
+        onClose={() => setAddRoleModalOpen(false)}
+        onCreated={() => {
+          setAddRoleModalOpen(false);
+          loadRoles();
+        }}
+      />
     </Card>
   );
 }
