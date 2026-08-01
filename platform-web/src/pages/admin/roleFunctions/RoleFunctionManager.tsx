@@ -91,7 +91,7 @@ export function RoleFunctionManager() {
 
   return (
     <Row gutter={[24, 24]} align="stretch" style={{ alignItems: 'stretch' }}>
-      <Col xs={24} xl={12} style={{ display: 'flex' }}>
+      <Col xs={24} xl={11} style={{ display: 'flex' }}>
         <Card title={t('admin.roleFunctions.title')} style={{ width: '100%', height: '100%' }}>
           <Typography.Paragraph type="secondary">{t('admin.roleFunctions.hint')}</Typography.Paragraph>
           <Space style={{ marginBottom: 16 }} wrap>
@@ -186,7 +186,7 @@ export function RoleFunctionManager() {
           />
         </Card>
       </Col>
-      <Col xs={24} xl={12} style={{ display: 'flex' }}>
+      <Col xs={24} xl={13} style={{ display: 'flex' }}>
         <FunctionsCatalogTable />
       </Col>
     </Row>

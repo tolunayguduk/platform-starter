@@ -161,6 +161,7 @@ export function FunctionsCatalogTable() {
           {
             title: t('admin.roleFunctions.column.description'),
             key: 'description',
+            width: 200,
             render: (_: unknown, fn: FunctionCatalogRow) => (
               <Input
                 key={fn.id + (fn.description ?? '')}
