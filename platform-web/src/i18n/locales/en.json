@@ -125,6 +125,8 @@
       "roles": "Roles"
     },
     "databaseTablesTitle": "Database Tables",
+    "databaseTablesTitleFor": "Database Tables — {{username}}",
+    "databaseTablesEmptyState": "Select a row in the Users table above to see that user's database records here.",
     "databaseTablesHint": "Click a row to expand it and see that record's audit (change) history.",
     "tables": {
       "userProfile": "User Profiles",

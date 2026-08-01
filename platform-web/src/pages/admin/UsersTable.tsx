@@ -202,7 +202,12 @@ function AuditEventsView({ userId }: { userId: string }) {
   );
 }
 
-export function UsersTable() {
+interface UsersTableProps {
+  selectedUserId: string | null;
+  onSelectUser: (user: AdminUser) => void;
+}
+
+export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
@@ -246,6 +251,10 @@ export function UsersTable() {
         dataSource={users}
         pagination={{ pageSize: 10 }}
         expandable={{ expandedRowRender: (record) => <AuditEventsView userId={record.id} /> }}
+        onRow={(record) => ({
+          onClick: () => onSelectUser(record),
+          style: { cursor: 'pointer', backgroundColor: record.id === selectedUserId ? 'rgba(22, 119, 255, 0.08)' : undefined },
+        })}
         columns={[
           {
             title: t('admin.column.username'),
@@ -277,7 +286,7 @@ export function UsersTable() {
                 </Button>
               );
               return (
-                <Space size={6}>
+                <Space size={6} onClick={(e) => e.stopPropagation()}>
                   <Tag color={enabled ? 'green' : 'red'}>{status}</Tag>
                   {enabled ? (
                     <Popconfirm
@@ -308,7 +317,13 @@ export function UsersTable() {
             title: t('admin.editRow.actionsColumn'),
             key: 'actions',
             render: (_: unknown, record: AdminUser) => (
-              <Button size="small" onClick={() => setEditingUser(record)}>
+              <Button
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingUser(record);
+                }}
+              >
                 {t('admin.editRow.editAction')}
               </Button>
             ),

@@ -10,7 +10,12 @@ import {
   fetchAdminTables,
   updateAdminTableRow,
   type AdminTable,
+  type AdminUser,
 } from '../../api/admin';
+
+/** The only tables that carry a keycloak_user_id column - the rest (PERMISSION, ROLE_PERMISSION)
+ * are global definitions, not scoped to any one user, so they have no place in a per-user view. */
+const USER_SCOPED_TABLE_KEYS = new Set(['USER_PROFILE', 'USER_CONTACT', 'USER_CONSENT']);
 
 /** "USER_PROFILE" -> "userProfile", to key into the admin.tables.* i18n namespace. */
 function toCamelKey(enumKey: string): string {
@@ -216,7 +221,17 @@ function AuditRowsView({ tableKey, primaryKeyValue }: { tableKey: string; primar
   );
 }
 
-function AdminTableTab({ tableKey, hasAudit, editableColumns }: { tableKey: string; hasAudit: boolean; editableColumns: string[] }) {
+function AdminTableTab({
+  tableKey,
+  hasAudit,
+  editableColumns,
+  filterUserId,
+}: {
+  tableKey: string;
+  hasAudit: boolean;
+  editableColumns: string[];
+  filterUserId: string;
+}) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
   const [columns, setColumns] = useState<string[]>([]);
@@ -236,6 +251,10 @@ function AdminTableTab({ tableKey, hasAudit, editableColumns }: { tableKey: stri
       })
       .finally(() => setLoading(false));
   }, [accessToken, tableKey]);
+
+  // Every user-scoped table is fetched in full (same 500-row cap as before) and filtered here -
+  // no extra endpoint needed, and switching the selected user re-filters without a re-fetch.
+  const visibleRows = rows.filter((r) => String(r.keycloak_user_id) === filterUserId);
 
   function handleSaved(updatedRow: Record<string, unknown>) {
     setRows((prev) => prev.map((r) => (r[primaryKeyColumn] === updatedRow[primaryKeyColumn] ? updatedRow : r)));
@@ -259,7 +278,7 @@ function AdminTableTab({ tableKey, hasAudit, editableColumns }: { tableKey: stri
       <Table
         rowKey={(record) => String(record[primaryKeyColumn])}
         loading={loading}
-        dataSource={rows}
+        dataSource={visibleRows}
         columns={tableColumns}
         pagination={{ pageSize: 10 }}
         expandable={
@@ -287,26 +306,48 @@ function AdminTableTab({ tableKey, hasAudit, editableColumns }: { tableKey: stri
   );
 }
 
-export function DatabaseTablesBrowser() {
+export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUser | null }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
   const [tables, setTables] = useState<AdminTable[]>([]);
 
   useEffect(() => {
-    if (!accessToken) return;
-    fetchAdminTables(accessToken).then(setTables);
-  }, [accessToken]);
+    if (!accessToken || !selectedUser) {
+      setTables([]);
+      return;
+    }
+    fetchAdminTables(accessToken).then((data) => setTables(data.filter((table) => USER_SCOPED_TABLE_KEYS.has(table.key))));
+  }, [accessToken, selectedUser]);
 
   return (
-    <Card title={t('admin.databaseTablesTitle')}>
-      <Typography.Paragraph type="secondary">{t('admin.databaseTablesHint')}</Typography.Paragraph>
-      <Tabs
-        items={tables.map((table) => ({
-          key: table.key,
-          label: t(`admin.tables.${toCamelKey(table.key)}`),
-          children: <AdminTableTab tableKey={table.key} hasAudit={table.hasAudit} editableColumns={table.editableColumns} />,
-        }))}
-      />
+    <Card
+      title={
+        selectedUser
+          ? t('admin.databaseTablesTitleFor', { username: selectedUser.username })
+          : t('admin.databaseTablesTitle')
+      }
+    >
+      {!selectedUser ? (
+        <Typography.Paragraph type="secondary">{t('admin.databaseTablesEmptyState')}</Typography.Paragraph>
+      ) : (
+        <>
+          <Typography.Paragraph type="secondary">{t('admin.databaseTablesHint')}</Typography.Paragraph>
+          <Tabs
+            items={tables.map((table) => ({
+              key: table.key,
+              label: t(`admin.tables.${toCamelKey(table.key)}`),
+              children: (
+                <AdminTableTab
+                  tableKey={table.key}
+                  hasAudit={table.hasAudit}
+                  editableColumns={table.editableColumns}
+                  filterUserId={selectedUser.id}
+                />
+              ),
+            }))}
+          />
+        </>
+      )}
     </Card>
   );
 }

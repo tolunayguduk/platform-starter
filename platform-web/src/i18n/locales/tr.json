@@ -125,6 +125,8 @@
       "roles": "Roller"
     },
     "databaseTablesTitle": "Veritabanı Tabloları",
+    "databaseTablesTitleFor": "Veritabanı Tabloları — {{username}}",
+    "databaseTablesEmptyState": "Yukarıdaki Kullanıcılar tablosundan bir satır seçin, o kullanıcının veritabanı kayıtları burada görünsün.",
     "databaseTablesHint": "Bir satıra tıklayıp genişleterek o kaydın audit (değişiklik) geçmişini görebilirsiniz.",
     "tables": {
       "userProfile": "Kullanıcı Profilleri",
