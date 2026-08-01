@@ -12,8 +12,12 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
   const { t } = useTranslation();
   const { accessToken } = useAuth();
   const [tables, setTables] = useState<AdminTable[]>([]);
+  const [activeTabKey, setActiveTabKey] = useState('USER_PROFILE');
 
   useEffect(() => {
+    // A newly selected user re-opens this browser fresh - always land on User Profiles rather
+    // than wherever the previous user's tab selection happened to be.
+    setActiveTabKey('USER_PROFILE');
     if (!accessToken || !selectedUser) {
       setTables([]);
       return;
@@ -35,6 +39,8 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
         <>
           <Typography.Paragraph type="secondary">{t('admin.databaseTablesHint')}</Typography.Paragraph>
           <Tabs
+            activeKey={activeTabKey}
+            onChange={setActiveTabKey}
             items={[
               ...tables.map((table) => ({
                 key: table.key,
