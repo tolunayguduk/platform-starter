@@ -4,6 +4,7 @@ import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
 import com.platform.security.integration.keycloak.model.KeycloakUser;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
+import com.platform.security.integration.keycloak.model.RealmRole;
 import com.platform.security.integration.keycloak.model.ResetPasswordRequest;
 import com.platform.security.integration.keycloak.model.UpdateKeycloakUserRequest;
 
@@ -61,9 +62,16 @@ public interface KeycloakAdminClient {
      * defined, so the admin panel's editable-role set is always exactly what the realm has. */
     List<String> listRealmRoles();
 
+    /** Same set as listRealmRoles(), with each role's Keycloak-stored description too - backs the
+     * admin panel's role table (name-only lookups elsewhere don't need the extra round trip cost). */
+    List<RealmRole> listRealmRolesDetailed();
+
     /** Creates a new realm role - Keycloak stays the only place role names are defined, so a role
      * only becomes assignable/manageable once it exists here, never as local metadata. */
     void createRealmRole(String roleName);
+
+    /** Updates a role's description - the only field on an existing role this app ever changes. */
+    void updateRealmRoleDescription(String roleName, String description);
 
     /** Deletes a realm role entirely. Any local role_permission rows referencing it become the
      * caller's responsibility to clean up - this client has no knowledge of that table. */

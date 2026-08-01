@@ -11,6 +11,8 @@ import {
   fetchAdminRoles,
   fetchAdminTableRows,
   updateAdminTableRow,
+  updateRoleDescription,
+  type AdminRole,
 } from '../../api/admin';
 
 // Every function is one of exactly these three statuses for a given role - see AccessLevel.
@@ -120,6 +122,7 @@ function AddFunctionModal({ open, role, catalog, alreadyGrantedPermissionIds, on
         const created = await createAdminTableRow(accessToken, 'PERMISSION', {
           key: values.key.trim(),
           ui_policy: values.uiPolicy,
+          description: values.description?.trim() || null,
         });
         permissionId = Number(created.id);
       }
@@ -173,6 +176,9 @@ function AddFunctionModal({ open, role, catalog, alreadyGrantedPermissionIds, on
           <>
             <Form.Item name="key" label={t('admin.roleFunctions.newFunction.keyPlaceholder')} rules={[{ required: true, whitespace: true }]}>
               <Input placeholder={t('admin.roleFunctions.newFunction.keyPlaceholder')} />
+            </Form.Item>
+            <Form.Item name="description" label={t('admin.roleFunctions.descriptionPlaceholder')}>
+              <Input placeholder={t('admin.roleFunctions.descriptionPlaceholder')} />
             </Form.Item>
             <Form.Item name="uiPolicy" label={t('admin.roleFunctions.newFunction.uiPolicyPlaceholder')} rules={[{ required: true }]}>
               <Select options={UI_POLICY_OPTIONS.map((policy) => ({ value: policy, label: t(`admin.roleFunctions.uiPolicy.${policy}`) }))} />
@@ -334,6 +340,7 @@ interface FunctionCatalogRow {
   id: string;
   key: string;
   uiPolicy: string;
+  description: string | null;
 }
 
 function AddFunctionCatalogModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
@@ -353,7 +360,11 @@ function AddFunctionCatalogModal({ open, onClose, onCreated }: { open: boolean; 
     const values = await form.validateFields();
     setSaving(true);
     try {
-      await createAdminTableRow(accessToken, 'PERMISSION', { key: values.key.trim(), ui_policy: values.uiPolicy });
+      await createAdminTableRow(accessToken, 'PERMISSION', {
+        key: values.key.trim(),
+        ui_policy: values.uiPolicy,
+        description: values.description?.trim() || null,
+      });
       message.success(t('admin.roleFunctions.newFunction.success'));
       handleClose();
       onCreated();
@@ -380,6 +391,9 @@ function AddFunctionCatalogModal({ open, onClose, onCreated }: { open: boolean; 
       <Form form={form} layout="vertical">
         <Form.Item name="key" label={t('admin.roleFunctions.newFunction.keyPlaceholder')} rules={[{ required: true, whitespace: true }]}>
           <Input placeholder={t('admin.roleFunctions.newFunction.keyPlaceholder')} />
+        </Form.Item>
+        <Form.Item name="description" label={t('admin.roleFunctions.descriptionPlaceholder')}>
+          <Input placeholder={t('admin.roleFunctions.descriptionPlaceholder')} />
         </Form.Item>
         <Form.Item
           name="uiPolicy"
@@ -414,7 +428,12 @@ function FunctionsCatalogTable() {
     fetchAdminTableRows(accessToken, 'PERMISSION')
       .then((data) => {
         const rows = data.rows
-          .map((r) => ({ id: String(r.id), key: String(r.key), uiPolicy: String(r.ui_policy) }))
+          .map((r) => ({
+            id: String(r.id),
+            key: String(r.key),
+            uiPolicy: String(r.ui_policy),
+            description: r.description == null ? null : String(r.description),
+          }))
           .sort((a, b) => a.key.localeCompare(b.key));
         setFunctions(rows);
       })
@@ -425,7 +444,9 @@ function FunctionsCatalogTable() {
   useEffect(loadFunctions, [accessToken]);
 
   const visibleFunctions = functions.filter(
-    (fn) => fn.key.toLowerCase().includes(search.toLowerCase()) && (uiPolicyFilter === undefined || fn.uiPolicy === uiPolicyFilter),
+    (fn) =>
+      (fn.key.toLowerCase().includes(search.toLowerCase()) || (fn.description ?? '').toLowerCase().includes(search.toLowerCase())) &&
+      (uiPolicyFilter === undefined || fn.uiPolicy === uiPolicyFilter),
   );
 
   async function handleKeyChange(fn: FunctionCatalogRow, newKey: string) {
@@ -433,6 +454,20 @@ function FunctionsCatalogTable() {
     setSavingId(fn.id);
     try {
       await updateAdminTableRow(accessToken, 'PERMISSION', fn.id, { key: newKey });
+      message.success(t('admin.roleFunctions.functionUpdated'));
+      loadFunctions();
+    } catch (e) {
+      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.error')) : t('admin.roleFunctions.error'));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleDescriptionChange(fn: FunctionCatalogRow, description: string) {
+    if (!accessToken || description === (fn.description ?? '')) return;
+    setSavingId(fn.id);
+    try {
+      await updateAdminTableRow(accessToken, 'PERMISSION', fn.id, { description: description || null });
       message.success(t('admin.roleFunctions.functionUpdated'));
       loadFunctions();
     } catch (e) {
@@ -502,8 +537,22 @@ function FunctionsCatalogTable() {
           {
             title: t('admin.functionAccess.column.function'),
             key: 'key',
+            width: 220,
             render: (_: unknown, fn: FunctionCatalogRow) => (
               <Input key={fn.id + fn.key} defaultValue={fn.key} onBlur={(e) => handleKeyChange(fn, e.target.value.trim())} onPressEnter={(e) => e.currentTarget.blur()} />
+            ),
+          },
+          {
+            title: t('admin.roleFunctions.column.description'),
+            key: 'description',
+            render: (_: unknown, fn: FunctionCatalogRow) => (
+              <Input
+                key={fn.id + (fn.description ?? '')}
+                defaultValue={fn.description ?? ''}
+                placeholder={t('admin.roleFunctions.descriptionPlaceholder')}
+                onBlur={(e) => handleDescriptionChange(fn, e.target.value.trim())}
+                onPressEnter={(e) => e.currentTarget.blur()}
+              />
             ),
           },
           {
@@ -550,11 +599,12 @@ export function RoleFunctionManager() {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
-  const [roles, setRoles] = useState<string[]>([]);
+  const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleSearch, setRoleSearch] = useState('');
   const [addRoleModalOpen, setAddRoleModalOpen] = useState(false);
   const [deletingRole, setDeletingRole] = useState<string | null>(null);
+  const [savingDescriptionFor, setSavingDescriptionFor] = useState<string | null>(null);
 
   function loadRoles() {
     if (!accessToken) return;
@@ -583,7 +633,27 @@ export function RoleFunctionManager() {
     }
   }
 
-  const visibleRoles = roles.filter((role) => role.toLowerCase().includes(roleSearch.toLowerCase())).map((role) => ({ role }));
+  async function handleDescriptionChange(role: AdminRole, description: string) {
+    if (!accessToken || description === (role.description ?? '')) return;
+    setSavingDescriptionFor(role.name);
+    try {
+      await updateRoleDescription(accessToken, role.name, description);
+      message.success(t('admin.roleFunctions.roleUpdated'));
+      loadRoles();
+    } catch (e) {
+      message.error(
+        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.roleUpdateError')) : t('admin.roleFunctions.roleUpdateError'),
+      );
+    } finally {
+      setSavingDescriptionFor(null);
+    }
+  }
+
+  const visibleRoles = roles.filter(
+    (role) =>
+      role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+      (role.description ?? '').toLowerCase().includes(roleSearch.toLowerCase()),
+  );
 
   return (
     <>
@@ -602,23 +672,38 @@ export function RoleFunctionManager() {
           </Button>
         </Space>
         <Table
-          rowKey="role"
+          rowKey="name"
           loading={loading}
           dataSource={visibleRoles}
           pagination={false}
-          expandable={{ expandedRowRender: (record) => <RoleFunctionsPanel role={record.role} /> }}
+          expandable={{ expandedRowRender: (record) => <RoleFunctionsPanel role={record.name} /> }}
           columns={[
-            { title: t('admin.roleFunctions.column.role'), dataIndex: 'role' },
+            { title: t('admin.roleFunctions.column.role'), dataIndex: 'name', width: 200 },
+            {
+              title: t('admin.roleFunctions.column.description'),
+              key: 'description',
+              render: (_: unknown, role: AdminRole) => (
+                <Input
+                  key={role.name + (role.description ?? '')}
+                  defaultValue={role.description ?? ''}
+                  placeholder={t('admin.roleFunctions.descriptionPlaceholder')}
+                  disabled={savingDescriptionFor === role.name}
+                  onBlur={(e) => handleDescriptionChange(role, e.target.value.trim())}
+                  onPressEnter={(e) => e.currentTarget.blur()}
+                />
+              ),
+            },
             {
               title: t('admin.editRow.actionsColumn'),
               key: 'actions',
-              render: (_: unknown, record: { role: string }) => (
+              width: 100,
+              render: (_: unknown, role: AdminRole) => (
                 <Popconfirm
                   title={t('admin.roleFunctions.confirmDeleteRole')}
-                  onConfirm={() => handleDeleteRole(record.role)}
-                  disabled={record.role === PROTECTED_ROLE}
+                  onConfirm={() => handleDeleteRole(role.name)}
+                  disabled={role.name === PROTECTED_ROLE}
                 >
-                  <Button size="small" danger disabled={record.role === PROTECTED_ROLE} loading={deletingRole === record.role}>
+                  <Button size="small" danger disabled={role.name === PROTECTED_ROLE} loading={deletingRole === role.name}>
                     {t('admin.roleFunctions.deleteRoleAction')}
                   </Button>
                 </Popconfirm>

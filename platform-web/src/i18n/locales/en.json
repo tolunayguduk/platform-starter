@@ -117,8 +117,10 @@
       "filterStatus": "Filter by status",
       "column": {
         "role": "Role",
+        "description": "Description",
         "accessLevel": "Access"
       },
+      "descriptionPlaceholder": "Description",
       "accessLevel": {
         "GRANTED": "Visible, Clickable",
         "VISIBLE_DENIED": "Visible, Not Clickable",
@@ -134,6 +136,8 @@
       "confirmDeleteRole": "Delete this role? This also removes all of its function grants.",
       "roleDeleted": "Role deleted.",
       "roleDeleteError": "Failed to delete role.",
+      "roleUpdated": "Role updated.",
+      "roleUpdateError": "Failed to update role.",
       "catalogTitle": "Functions",
       "catalogHint": "The full function catalog, independent of any one role. Editing or deleting a function here affects every role that has it.",
       "filterUiPolicy": "Filter by default behavior",

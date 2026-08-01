@@ -3,6 +3,7 @@ package com.platform.user.controller;
 import com.platform.user.constant.AdminTableKey;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.controller.model.AdminAuditRowsDto;
+import com.platform.user.controller.model.AdminRoleDto;
 import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
@@ -12,6 +13,7 @@ import com.platform.user.controller.model.CreateAdminRowRequestDto;
 import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
+import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.controller.model.UpdateUserStatusRequestDto;
@@ -40,14 +42,19 @@ public interface AdminController {
     @GetMapping("/users")
     List<AdminUserDto> listUsers();
 
-    /** Every realm role this application manages - backs the role picker in the role-function
-     * manager (and anywhere else the admin panel needs the live set of assignable roles). */
+    /** Every realm role this application manages, with its Keycloak-stored description - backs the
+     * role picker in the role-function manager (and anywhere else the admin panel needs the live
+     * set of assignable roles). */
     @GetMapping("/roles")
-    List<String> listManagedRoles();
+    List<AdminRoleDto> listManagedRoles();
 
     /** Defines a brand new role in Keycloak. */
     @PostMapping("/roles")
     void createRole(@RequestBody CreateRoleRequestDto request);
+
+    /** Updates a role's description - purely descriptive, no authorization meaning. */
+    @PutMapping("/roles/{name}")
+    void updateRoleDescription(@PathVariable String name, @RequestBody UpdateRoleDescriptionRequestDto request);
 
     /** Deletes a role entirely and cleans up its function grants. Rejects the ADMIN role. */
     @DeleteMapping("/roles/{name}")

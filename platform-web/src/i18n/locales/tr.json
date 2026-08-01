@@ -117,8 +117,10 @@
       "filterStatus": "Duruma göre filtrele",
       "column": {
         "role": "Rol",
+        "description": "Açıklama",
         "accessLevel": "Erişim"
       },
+      "descriptionPlaceholder": "Açıklama",
       "accessLevel": {
         "GRANTED": "Görünür ve Tıklanabilir",
         "VISIBLE_DENIED": "Görünür, Tıklanamaz",
@@ -134,6 +136,8 @@
       "confirmDeleteRole": "Bu rol silinsin mi? Bu, rolün tüm fonksiyon yetkilerini de kaldırır.",
       "roleDeleted": "Rol silindi.",
       "roleDeleteError": "Rol silinemedi.",
+      "roleUpdated": "Rol güncellendi.",
+      "roleUpdateError": "Rol güncellenemedi.",
       "catalogTitle": "Fonksiyonlar",
       "catalogHint": "Belirli bir role bağlı olmayan tüm fonksiyon kataloğu. Burada bir fonksiyonu düzenlemek veya silmek, onu kullanan her rolü etkiler.",
       "filterUiPolicy": "Varsayılan davranışa göre filtrele",

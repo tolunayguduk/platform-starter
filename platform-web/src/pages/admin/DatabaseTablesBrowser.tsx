@@ -308,18 +308,24 @@ function UserFunctionAccessView({ userId }: { userId: string }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
   const [permissions, setPermissions] = useState<Record<string, string>>({});
+  const [descriptions, setDescriptions] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!accessToken) return;
     setLoading(true);
-    fetchAdminUserUiPermissions(accessToken, userId)
-      .then(setPermissions)
+    Promise.all([fetchAdminUserUiPermissions(accessToken, userId), fetchAdminTableRows(accessToken, 'PERMISSION')])
+      .then(([uiPermissions, catalog]) => {
+        setPermissions(uiPermissions);
+        setDescriptions(
+          Object.fromEntries(catalog.rows.map((p) => [String(p.key), p.description == null ? null : String(p.description)])),
+        );
+      })
       .finally(() => setLoading(false));
   }, [accessToken, userId]);
 
   const rows = Object.entries(permissions)
-    .map(([key, status]) => ({ key, status }))
+    .map(([key, status]) => ({ key, status, description: descriptions[key] ?? null }))
     .sort((a, b) => a.key.localeCompare(b.key));
 
   return (
@@ -331,6 +337,7 @@ function UserFunctionAccessView({ userId }: { userId: string }) {
       pagination={false}
       columns={[
         { title: t('admin.functionAccess.column.function'), dataIndex: 'key' },
+        { title: t('admin.roleFunctions.column.description'), dataIndex: 'description', render: (v: string | null) => v ?? '-' },
         {
           title: t('admin.functionAccess.column.status'),
           dataIndex: 'status',

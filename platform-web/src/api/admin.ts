@@ -14,14 +14,27 @@ export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
   return apiFetch<AdminUser[]>('/api/admin/users', { accessToken });
 }
 
-export function fetchAdminRoles(accessToken: string): Promise<string[]> {
-  return apiFetch<string[]>('/api/admin/roles', { accessToken });
+export interface AdminRole {
+  name: string;
+  description: string | null;
+}
+
+export function fetchAdminRoles(accessToken: string): Promise<AdminRole[]> {
+  return apiFetch<AdminRole[]>('/api/admin/roles', { accessToken });
 }
 
 export function createAdminRole(accessToken: string, name: string): Promise<void> {
   return apiFetch<void>('/api/admin/roles', {
     method: 'POST',
     body: { name },
+    accessToken,
+  });
+}
+
+export function updateRoleDescription(accessToken: string, name: string, description: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}`, {
+    method: 'PUT',
+    body: { description },
     accessToken,
   });
 }
@@ -131,7 +144,7 @@ export function updateAdminTableRow(
 }
 
 /** PERMISSION (defining a new function) and ROLE_PERMISSION (granting one to a role) support
- * create; only ROLE_PERMISSION supports delete (revoking a function from a role). */
+ * both create and delete - deleting a PERMISSION cascades to every role's grant of it. */
 export function createAdminTableRow(
   accessToken: string,
   key: string,

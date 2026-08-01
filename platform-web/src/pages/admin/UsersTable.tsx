@@ -231,7 +231,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
 
   useEffect(() => {
     if (!accessToken) return;
-    fetchAdminRoles(accessToken).then(setRoles);
+    fetchAdminRoles(accessToken).then((data) => setRoles(data.map((role) => role.name)));
   }, [accessToken]);
 
   async function handleStatusToggle(userId: string, enabled: boolean) {

@@ -1,6 +1,7 @@
 package com.platform.user.service;
 
 import com.platform.user.constant.StatsRange;
+import com.platform.user.service.model.AdminRoleResult;
 import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
@@ -20,13 +21,17 @@ public interface AdminUserService {
 
     List<AdminUserResult> listUsers();
 
-    /** Every realm role this application manages - Keycloak is the only place role names are
-     * defined, so this is always exactly what the realm currently has, never a hardcoded list. */
-    List<String> listManagedRoles();
+    /** Every realm role this application manages, with its Keycloak-stored description - Keycloak
+     * is the only place either is defined, so this is always exactly what the realm currently has,
+     * never a hardcoded list. */
+    List<AdminRoleResult> listManagedRoles();
 
     /** Defines a brand new role in Keycloak - functions are then granted to it via
      * AdminTableService (ROLE_PERMISSION), never assigned to a user directly. */
     void createRole(String roleName);
+
+    /** Updates a role's description - purely descriptive, no authorization meaning. */
+    void updateRoleDescription(String roleName, String description);
 
     /** Deletes a role entirely (rejects the one this admin panel itself is gated on) and cleans up
      * its now-orphaned function grants. */

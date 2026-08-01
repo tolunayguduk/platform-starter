@@ -3,6 +3,7 @@ package com.platform.user.controller;
 import com.platform.user.constant.AdminTableKey;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.controller.model.AdminAuditRowsDto;
+import com.platform.user.controller.model.AdminRoleDto;
 import com.platform.user.controller.model.AdminRowDto;
 import com.platform.user.controller.model.AdminTableDto;
 import com.platform.user.controller.model.AdminTableRowsDto;
@@ -12,6 +13,7 @@ import com.platform.user.controller.model.CreateAdminRowRequestDto;
 import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
+import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
 import com.platform.user.controller.model.UpdateUserStatusRequestDto;
@@ -51,13 +53,18 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public List<String> listManagedRoles() {
-        return adminUserService.listManagedRoles();
+    public List<AdminRoleDto> listManagedRoles() {
+        return adminUserMapper.toRoleDtoList(adminUserService.listManagedRoles());
     }
 
     @Override
     public void createRole(CreateRoleRequestDto request) {
         adminUserService.createRole(request.name());
+    }
+
+    @Override
+    public void updateRoleDescription(String name, UpdateRoleDescriptionRequestDto request) {
+        adminUserService.updateRoleDescription(name, request.description());
     }
 
     @Override

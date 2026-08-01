@@ -71,8 +71,8 @@ public class AdminTableServiceImpl implements AdminTableService {
                 List.of("consent_type", "legal_basis", "purpose")));
         REGISTRY.put(AdminTableKey.PERMISSION, new TableMeta(
                 "permission", null, "id",
-                List.of("id", "key", "ui_policy"),
-                List.of("key", "ui_policy")));
+                List.of("id", "key", "ui_policy", "description"),
+                List.of("key", "ui_policy", "description")));
         REGISTRY.put(AdminTableKey.ROLE_PERMISSION, new TableMeta(
                 "role_permission", "role_permission_aud", "id",
                 List.of("id", "role_name", "permission_id", "access_level"),
@@ -273,6 +273,9 @@ public class AdminTableServiceImpl implements AdminTableService {
         Permission entity = new Permission();
         entity.setKey((String) values.get("key"));
         entity.setUiPolicy(UiPolicy.valueOf((String) values.get("ui_policy")));
+        if (values.get("description") != null) {
+            entity.setDescription((String) values.get("description"));
+        }
         permissionRepository.save(entity);
         permissionRepository.flush();
         return String.valueOf(entity.getId());
@@ -286,6 +289,9 @@ public class AdminTableServiceImpl implements AdminTableService {
         }
         if (changes.containsKey("ui_policy")) {
             entity.setUiPolicy(UiPolicy.valueOf((String) changes.get("ui_policy")));
+        }
+        if (changes.containsKey("description")) {
+            entity.setDescription((String) changes.get("description"));
         }
         permissionRepository.save(entity);
         permissionRepository.flush();

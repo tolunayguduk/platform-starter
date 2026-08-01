@@ -23,13 +23,20 @@ public class Permission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** "resource:action" format, e.g. "report:list" */
-    @Column(nullable = false, unique = true)
+    /** "resource:action" format, e.g. "report:list". Column name backtick-quoted because "key" is
+     * a reserved word in MySQL - without this, Hibernate's generated UPDATE/INSERT SQL breaks
+     * (the raw JDBC reads in AdminTableServiceImpl already quote it for the same reason). */
+    @Column(name = "`key`", nullable = false, unique = true)
     private String key;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "ui_policy", nullable = false)
     private UiPolicy uiPolicy = UiPolicy.HIDE_IF_DENIED;
+
+    /** Human-readable explanation of what this function does - purely descriptive, shown in the
+     * admin panel's function catalog, never read by any authorization or UI-policy logic. */
+    @Column
+    private String description;
 
     public Long getId() {
         return id;
@@ -49,5 +56,13 @@ public class Permission {
 
     public void setUiPolicy(UiPolicy uiPolicy) {
         this.uiPolicy = uiPolicy;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

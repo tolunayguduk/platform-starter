@@ -209,6 +209,11 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
 
     @Override
     public List<String> listRealmRoles() {
+        return listRealmRolesDetailed().stream().map(RealmRole::name).toList();
+    }
+
+    @Override
+    public List<RealmRole> listRealmRolesDetailed() {
         List<RealmRole> roles = restClient.get().uri("/roles")
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<RealmRole>>() {
@@ -217,9 +222,20 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
             return List.of();
         }
         return roles.stream()
-                .map(RealmRole::name)
-                .filter(KeycloakRoleMapper::isApplicationRole)
+                .filter(r -> KeycloakRoleMapper.isApplicationRole(r.name()))
                 .toList();
+    }
+
+    @Override
+    public void updateRealmRoleDescription(String roleName, String description) {
+        restClient.put().uri("/roles/{roleName}", roleName)
+                .body(Map.of("name", roleName, "description", description == null ? "" : description))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4009",
+                            "Keycloak admin API rejected role update: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
     }
 
     @Override

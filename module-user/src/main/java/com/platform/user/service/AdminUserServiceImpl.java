@@ -8,6 +8,7 @@ import com.platform.user.constant.StatsRange;
 import com.platform.user.entity.UserProfile;
 import com.platform.user.repository.RolePermissionRepository;
 import com.platform.user.repository.UserProfileRepository;
+import com.platform.user.service.model.AdminRoleResult;
 import com.platform.user.service.model.AdminUserAuditEventResult;
 import com.platform.user.service.model.AdminUserResult;
 import com.platform.user.service.model.RegistrationStatsPointResult;
@@ -79,8 +80,10 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public List<String> listManagedRoles() {
-        return keycloakAdminClient.listRealmRoles();
+    public List<AdminRoleResult> listManagedRoles() {
+        return keycloakAdminClient.listRealmRolesDetailed().stream()
+                .map(r -> new AdminRoleResult(r.name(), r.description()))
+                .toList();
     }
 
     @Override
@@ -89,6 +92,11 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Role name required");
         }
         keycloakAdminClient.createRealmRole(roleName);
+    }
+
+    @Override
+    public void updateRoleDescription(String roleName, String description) {
+        keycloakAdminClient.updateRealmRoleDescription(roleName, description);
     }
 
     @Override
