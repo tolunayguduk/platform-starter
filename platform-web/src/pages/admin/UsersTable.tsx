@@ -224,6 +224,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   function loadUsers() {
     if (!accessToken) return;
@@ -256,13 +257,29 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
     }
   }
 
+  const visibleUsers = users.filter((u) => {
+    const needle = search.toLowerCase();
+    return (
+      u.username.toLowerCase().includes(needle) ||
+      u.email.toLowerCase().includes(needle) ||
+      (u.fullName ?? '').toLowerCase().includes(needle)
+    );
+  });
+
   return (
     <Card title={t('admin.usersTitle')}>
       <Typography.Paragraph type="secondary">{t('admin.usersHint')}</Typography.Paragraph>
+      <Input.Search
+        style={{ width: 240, marginBottom: 16 }}
+        allowClear
+        placeholder={t('admin.searchUsers')}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
       <Table
         rowKey="id"
         loading={loading}
-        dataSource={users}
+        dataSource={visibleUsers}
         pagination={{ pageSize: 10 }}
         expandable={{ expandedRowRender: (record) => <AuditEventsView userId={record.id} /> }}
         onRow={(record) => ({

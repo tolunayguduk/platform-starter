@@ -188,6 +188,7 @@
     },
     "usersTitle": "Kullanıcılar",
     "usersHint": "Bir satıra tıklayıp genişleterek o kullanıcının Keycloak'taki kimlik/rol audit geçmişini görebilirsiniz.",
+    "searchUsers": "Kullanıcı ara...",
     "you": "siz",
     "column": {
       "username": "Kullanıcı Adı",

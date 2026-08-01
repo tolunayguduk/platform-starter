@@ -188,6 +188,7 @@
     },
     "usersTitle": "Users",
     "usersHint": "Click a row to expand it and see that user's identity/role audit history from Keycloak.",
+    "searchUsers": "Search users...",
     "you": "you",
     "column": {
       "username": "Username",
