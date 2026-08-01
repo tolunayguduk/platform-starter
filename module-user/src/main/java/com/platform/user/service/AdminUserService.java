@@ -21,6 +21,10 @@ public interface AdminUserService {
 
     void updateUserRoles(UpdateUserRolesCommand command);
 
+    /** Enable/disable the account - a disabled user cannot obtain a token from Keycloak at all.
+     * currentAdminKeycloakUserId guards against an admin disabling their own account. */
+    void updateUserStatus(String keycloakUserId, boolean enabled, String currentAdminKeycloakUserId);
+
     /** Admin-panel edit of username/email - still routed straight through to Keycloak,
      * never persisted locally, same as everything else in this service. */
     void updateUserIdentity(UpdateUserIdentityCommand command);

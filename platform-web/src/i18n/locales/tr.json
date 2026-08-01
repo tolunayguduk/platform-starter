@@ -171,6 +171,14 @@
         "resourcePath": "Kaynak",
         "representation": "Detay"
       }
+    },
+    "status": {
+      "enable": "Etkinleştir",
+      "disable": "Devre Dışı Bırak",
+      "confirmDisable": "Bu kullanıcı devre dışı bırakılsın mı? Artık giriş yapamayacak.",
+      "enabled": "Kullanıcı etkinleştirildi.",
+      "disabled": "Kullanıcı devre dışı bırakıldı.",
+      "error": "Kullanıcı durumu güncellenemedi."
     }
   },
   "notFound": {

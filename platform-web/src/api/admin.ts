@@ -34,6 +34,14 @@ export function updateUserIdentity(
   });
 }
 
+export function updateUserStatus(accessToken: string, userId: string, enabled: boolean): Promise<void> {
+  return apiFetch<void>(`/api/admin/users/${userId}/status`, {
+    method: 'PUT',
+    body: { enabled },
+    accessToken,
+  });
+}
+
 export interface AdminUserAuditEvent {
   time: string;
   operationType: string;

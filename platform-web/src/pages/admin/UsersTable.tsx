@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Card, Descriptions, Form, Input, Modal, Select, Space, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Descriptions, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { ApiError } from '../../api/client';
@@ -8,6 +8,7 @@ import {
   fetchAdminUsers,
   updateUserIdentity,
   updateUserRoles,
+  updateUserStatus,
   type AdminUser,
   type AdminUserAuditEvent,
 } from '../../api/admin';
@@ -203,10 +204,12 @@ function AuditEventsView({ userId }: { userId: string }) {
 
 export function UsersTable() {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
 
   function loadUsers() {
     if (!accessToken) return;
@@ -219,6 +222,20 @@ export function UsersTable() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(loadUsers, [accessToken]);
+
+  async function handleStatusToggle(userId: string, enabled: boolean) {
+    if (!accessToken) return;
+    setStatusSavingId(userId);
+    try {
+      await updateUserStatus(accessToken, userId, enabled);
+      message.success(enabled ? t('admin.status.enabled') : t('admin.status.disabled'));
+      loadUsers();
+    } catch (e) {
+      message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.status.error')) : t('admin.status.error'));
+    } finally {
+      setStatusSavingId(null);
+    }
+  }
 
   return (
     <Card title={t('admin.usersTitle')}>
@@ -242,7 +259,41 @@ export function UsersTable() {
           },
           { title: t('admin.column.fullName'), dataIndex: 'fullName', render: (v: string | null) => v ?? '-' },
           { title: t('admin.column.email'), dataIndex: 'email' },
-          { title: t('admin.column.status'), dataIndex: 'status' },
+          {
+            title: t('admin.column.status'),
+            dataIndex: 'status',
+            render: (status: string, record: AdminUser) => {
+              const enabled = status === 'ACTIVE';
+              const isSelf = record.username === currentUser?.username;
+              const toggleButton = (
+                <Button
+                  size="small"
+                  danger={enabled}
+                  disabled={isSelf && enabled}
+                  loading={statusSavingId === record.id}
+                  onClick={enabled ? undefined : () => handleStatusToggle(record.id, true)}
+                >
+                  {enabled ? t('admin.status.disable') : t('admin.status.enable')}
+                </Button>
+              );
+              return (
+                <Space size={6}>
+                  <Tag color={enabled ? 'green' : 'red'}>{status}</Tag>
+                  {enabled ? (
+                    <Popconfirm
+                      title={t('admin.status.confirmDisable')}
+                      onConfirm={() => handleStatusToggle(record.id, false)}
+                      disabled={isSelf}
+                    >
+                      {toggleButton}
+                    </Popconfirm>
+                  ) : (
+                    toggleButton
+                  )}
+                </Space>
+              );
+            },
+          },
           {
             title: t('admin.column.createdAt'),
             dataIndex: 'createdAt',

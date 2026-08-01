@@ -97,6 +97,16 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public void updateUserStatus(String keycloakUserId, boolean enabled, String currentAdminKeycloakUserId) {
+        // Same reasoning as the ADMIN-role self-lockout guard in updateUserRoles - an admin must
+        // not be able to disable the only account they can currently act through.
+        if (!enabled && keycloakUserId.equals(currentAdminKeycloakUserId)) {
+            throw new BusinessException("USER-4003", "error.admin.self_disable", "Cannot disable your own account");
+        }
+        keycloakAdminClient.setUserEnabled(keycloakUserId, enabled);
+    }
+
+    @Override
     public void updateUserIdentity(UpdateUserIdentityCommand command) {
         if (isBlank(command.username()) || isBlank(command.email())) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Required field missing");

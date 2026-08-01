@@ -12,6 +12,7 @@ import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
+import com.platform.user.controller.model.UpdateUserStatusRequestDto;
 import com.platform.user.mapper.AdminTableMapper;
 import com.platform.user.mapper.AdminUserMapper;
 import com.platform.user.service.AdminTableService;
@@ -54,6 +55,11 @@ public class AdminControllerImpl implements AdminController {
     @Override
     public void updateUserIdentity(String id, UpdateUserIdentityRequestDto request) {
         adminUserService.updateUserIdentity(new UpdateUserIdentityCommand(id, request.username(), request.email()));
+    }
+
+    @Override
+    public void updateUserStatus(String id, UpdateUserStatusRequestDto request, Jwt jwt) {
+        adminUserService.updateUserStatus(id, request.enabled(), jwt.getSubject());
     }
 
     @Override

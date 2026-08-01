@@ -139,6 +139,18 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     @Override
+    public void setUserEnabled(String keycloakUserId, boolean enabled) {
+        restClient.put().uri("/users/{id}", keycloakUserId)
+                .body(Map.of("enabled", enabled))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4006",
+                            "Keycloak admin API rejected status update: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
     public void resetPassword(String keycloakUserId, ResetPasswordRequest request) {
         Map<String, Object> body = Map.of("type", "password", "value", request.newPassword(), "temporary", false);
         restClient.put().uri("/users/{id}/reset-password", keycloakUserId)

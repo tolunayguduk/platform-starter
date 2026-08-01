@@ -12,6 +12,7 @@ import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
+import com.platform.user.controller.model.UpdateUserStatusRequestDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,6 +42,11 @@ public interface AdminController {
     /** Username/email edit - routed straight through to Keycloak, never persisted locally. */
     @PutMapping("/users/{id}/identity")
     void updateUserIdentity(@PathVariable String id, @RequestBody UpdateUserIdentityRequestDto request);
+
+    /** Enable/disable the account - a disabled user cannot obtain a token from Keycloak. */
+    @PutMapping("/users/{id}/status")
+    void updateUserStatus(@PathVariable String id, @RequestBody UpdateUserStatusRequestDto request,
+                           @AuthenticationPrincipal Jwt jwt);
 
     /** This user's audit trail, sourced from Keycloak's own admin event log. */
     @GetMapping("/users/{id}/audit")

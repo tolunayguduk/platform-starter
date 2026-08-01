@@ -31,6 +31,9 @@ public interface KeycloakAdminClient {
     /** Admin panel identity edit - the only place username is ever changed by this app. */
     void updateUserIdentity(String keycloakUserId, String username, String email);
 
+    /** Enables/disables the account directly in Keycloak - a disabled user cannot obtain a token. */
+    void setUserEnabled(String keycloakUserId, boolean enabled);
+
     /** Sets a new permanent (non-temporary) password directly - caller is responsible for verifying the old one first. */
     void resetPassword(String keycloakUserId, ResetPasswordRequest request);
 

@@ -171,6 +171,14 @@
         "resourcePath": "Resource",
         "representation": "Details"
       }
+    },
+    "status": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "confirmDisable": "Disable this user? They will not be able to log in.",
+      "enabled": "User enabled.",
+      "disabled": "User disabled.",
+      "error": "Failed to update user status."
     }
   },
   "notFound": {
