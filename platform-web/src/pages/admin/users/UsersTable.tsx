@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Key } from 'react';
 import { App, Button, Card, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
@@ -7,6 +7,7 @@ import { fetchAdminRoles, fetchAdminUsers, updateUserStatus } from '../../../api
 import type { AdminRole, AdminUser } from '../../../types/admin';
 import { AuditEventsView } from './AuditEventsView';
 import { EditUserModal } from './EditUserModal';
+import { BulkAssignRolesModal } from './BulkAssignRolesModal';
 
 interface UsersTableProps {
   selectedUserId: string | null;
@@ -23,6 +24,9 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   function loadUsers() {
     if (!accessToken) return;
@@ -55,6 +59,26 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
     }
   }
 
+  const selectedUsers = users.filter((u) => selectedRowKeys.includes(u.id));
+
+  async function handleBulkStatusChange(enabled: boolean) {
+    if (!accessToken || selectedUsers.length === 0) return;
+    setBulkSaving(true);
+    try {
+      const results = await Promise.allSettled(selectedUsers.map((u) => updateUserStatus(accessToken, u.id, enabled)));
+      const failures = results.filter((r) => r.status === 'rejected').length;
+      if (failures > 0) {
+        message.warning(t('admin.bulk.partialError', { count: failures }));
+      } else {
+        message.success(t('admin.bulk.success'));
+      }
+      setSelectedRowKeys([]);
+      loadUsers();
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   const visibleUsers = users.filter((u) => {
     const needle = search.toLowerCase();
     return (
@@ -67,18 +91,55 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   return (
     <Card title={t('admin.usersTitle')}>
       <Typography.Paragraph type="secondary">{t('admin.usersHint')}</Typography.Paragraph>
-      <Input.Search
-        style={{ width: 240, marginBottom: 16 }}
-        allowClear
-        placeholder={t('admin.searchUsers')}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Input.Search
+          style={{ width: 240 }}
+          allowClear
+          placeholder={t('admin.searchUsers')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {selectedRowKeys.length > 0 && (
+          <>
+            <Typography.Text>{t('admin.bulk.selectedCount', { count: selectedRowKeys.length })}</Typography.Text>
+            <Button size="small" onClick={() => setBulkAssignOpen(true)}>
+              {t('admin.bulk.assignRoles')}
+            </Button>
+            <Button size="small" loading={bulkSaving} onClick={() => handleBulkStatusChange(true)}>
+              {t('admin.bulk.enable')}
+            </Button>
+            <Button
+              size="small"
+              danger
+              loading={bulkSaving}
+              onClick={() =>
+                modal.confirm({
+                  title: t('admin.bulk.confirmDisable', { count: selectedRowKeys.length }),
+                  okButtonProps: { danger: true },
+                  okText: t('admin.bulk.disable'),
+                  cancelText: t('admin.editRow.cancel'),
+                  onOk: () => handleBulkStatusChange(false),
+                })
+              }
+            >
+              {t('admin.bulk.disable')}
+            </Button>
+            <Button size="small" onClick={() => setSelectedRowKeys([])}>
+              {t('admin.bulk.clearSelection')}
+            </Button>
+          </>
+        )}
+      </Space>
       <Table
         rowKey="id"
         loading={loading}
         dataSource={visibleUsers}
         pagination={{ pageSize: 10 }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+          getCheckboxProps: (record) => ({ disabled: record.username === currentUser?.username }),
+        }}
         expandable={{ expandedRowRender: (record) => <AuditEventsView userId={record.id} /> }}
         onRow={(record) => ({
           onClick: () => onSelectUser(record),
@@ -168,6 +229,17 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
           onSaved={loadUsers}
         />
       )}
+      <BulkAssignRolesModal
+        open={bulkAssignOpen}
+        users={selectedUsers}
+        availableRoles={roles}
+        onClose={() => setBulkAssignOpen(false)}
+        onDone={() => {
+          setBulkAssignOpen(false);
+          setSelectedRowKeys([]);
+          loadUsers();
+        }}
+      />
     </Card>
   );
 }

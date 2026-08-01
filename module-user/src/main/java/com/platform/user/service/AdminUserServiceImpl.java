@@ -222,6 +222,15 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public List<AdminUserAuditEventResult> getRecentActivity(int limit) {
+        List<AdminEvent> events = keycloakAdminClient.getRecentAdminEvents(limit);
+        return events.stream()
+                .map(e -> new AdminUserAuditEventResult(
+                        Instant.ofEpochMilli(e.time()), e.operationType(), e.resourcePath(), e.representation()))
+                .toList();
+    }
+
+    @Override
     public List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range) {
         List<KeycloakUserSummary> users = keycloakAdminClient.listUsers();
         ZoneId zone = ZoneId.systemDefault();

@@ -280,4 +280,19 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
                 .sorted((a, b) -> Long.compare(b.time(), a.time()))
                 .toList();
     }
+
+    @Override
+    public List<AdminEvent> getRecentAdminEvents(int limit) {
+        List<AdminEvent> events = restClient.get().uri("/admin-events?max={max}", MAX_ADMIN_EVENTS_PAGE_SIZE)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<AdminEvent>>() {
+                });
+        if (events == null) {
+            return List.of();
+        }
+        return events.stream()
+                .sorted((a, b) -> Long.compare(b.time(), a.time()))
+                .limit(limit)
+                .toList();
+    }
 }

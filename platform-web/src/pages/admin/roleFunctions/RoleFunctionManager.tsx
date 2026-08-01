@@ -7,9 +7,11 @@ import { deleteAdminRole, fetchAdminRoles, fetchAdminUsers, updateRoleDescriptio
 import type { AdminRole } from '../../../types/admin';
 import { PROTECTED_ROLE } from './constants';
 import { AddRoleModal } from './AddRoleModal';
+import { CopyRoleModal } from './CopyRoleModal';
 import { RoleFunctionsPanel } from './RoleFunctionsPanel';
 import { FunctionsCatalogTable } from './FunctionsCatalogTable';
 import { RoleFunctionStatsCards } from './RoleFunctionStatsCards';
+import { RoleDistributionChart } from './RoleDistributionChart';
 
 /** Functions are managed through roles, not per user - a user's roles determine their functions,
  * so granting/updating/revoking always happens here, against a role, never against a single user. */
@@ -22,6 +24,7 @@ export function RoleFunctionManager() {
   const [loading, setLoading] = useState(true);
   const [roleSearch, setRoleSearch] = useState('');
   const [addRoleModalOpen, setAddRoleModalOpen] = useState(false);
+  const [copyingRole, setCopyingRole] = useState<string | null>(null);
   const [deletingRole, setDeletingRole] = useState<string | null>(null);
   const [savingDescriptionFor, setSavingDescriptionFor] = useState<string | null>(null);
   const [savingStatusFor, setSavingStatusFor] = useState<string | null>(null);
@@ -105,9 +108,10 @@ export function RoleFunctionManager() {
   );
 
   return (
-    <>
+    <Space orientation="vertical" size={24} style={{ width: '100%' }}>
       <RoleFunctionStatsCards />
-      <Row gutter={[24, 24]} align="stretch" style={{ alignItems: 'stretch', marginTop: 24 }}>
+      <RoleDistributionChart />
+      <Row gutter={[24, 24]} align="stretch" style={{ alignItems: 'stretch' }}>
         <Col xs={24} xl={11} style={{ display: 'flex' }}>
           <Card title={t('admin.roleFunctions.title')} style={{ width: '100%', height: '100%' }}>
             <Typography.Paragraph type="secondary">{t('admin.roleFunctions.hint')}</Typography.Paragraph>
@@ -184,17 +188,22 @@ export function RoleFunctionManager() {
                 {
                   title: t('admin.editRow.actionsColumn'),
                   key: 'actions',
-                  width: 100,
+                  width: 170,
                   render: (_: unknown, role: AdminRole) => (
-                    <Popconfirm
-                      title={t('admin.roleFunctions.confirmDeleteRole')}
-                      onConfirm={() => handleDeleteRole(role.name)}
-                      disabled={role.name === PROTECTED_ROLE}
-                    >
-                      <Button size="small" danger disabled={role.name === PROTECTED_ROLE} loading={deletingRole === role.name}>
-                        {t('admin.roleFunctions.deleteRoleAction')}
+                    <Space size={4}>
+                      <Button size="small" onClick={() => setCopyingRole(role.name)}>
+                        {t('admin.roleFunctions.copyRoleAction')}
                       </Button>
-                    </Popconfirm>
+                      <Popconfirm
+                        title={t('admin.roleFunctions.confirmDeleteRole')}
+                        onConfirm={() => handleDeleteRole(role.name)}
+                        disabled={role.name === PROTECTED_ROLE}
+                      >
+                        <Button size="small" danger disabled={role.name === PROTECTED_ROLE} loading={deletingRole === role.name}>
+                          {t('admin.roleFunctions.deleteRoleAction')}
+                        </Button>
+                      </Popconfirm>
+                    </Space>
                   ),
                 },
               ]}
@@ -207,12 +216,23 @@ export function RoleFunctionManager() {
                 loadRoles();
               }}
             />
+            {copyingRole && (
+              <CopyRoleModal
+                open
+                sourceRole={copyingRole}
+                onClose={() => setCopyingRole(null)}
+                onCopied={() => {
+                  setCopyingRole(null);
+                  loadRoles();
+                }}
+              />
+            )}
           </Card>
         </Col>
         <Col xs={24} xl={13} style={{ display: 'flex' }}>
           <FunctionsCatalogTable />
         </Col>
       </Row>
-    </>
+    </Space>
   );
 }

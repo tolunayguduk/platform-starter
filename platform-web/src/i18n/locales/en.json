@@ -126,7 +126,9 @@
         "totalRoles": "Total Roles",
         "assignedRoles": "Assigned Roles",
         "totalFunctions": "Total Functions",
-        "assignedFunctions": "Assigned Functions"
+        "assignedFunctions": "Assigned Functions",
+        "distributionTitle": "Role Distribution",
+        "distributionEmpty": "No users are assigned to any role yet."
       },
       "descriptionPlaceholder": "Description",
       "accessLevel": {
@@ -142,6 +144,14 @@
       "error": "Failed to update the role's functions.",
       "deleteRoleAction": "Delete",
       "confirmDeleteRole": "Delete this role? This also removes all of its function grants.",
+      "copyRoleAction": "Copy",
+      "copyRole": {
+        "title": "Copy \"{{role}}\" into a new role",
+        "placeholder": "New role name (e.g. SUPPORT_L2)",
+        "success": "Role copied.",
+        "partialError": "Role created, but {{count}} function grant(s) could not be copied.",
+        "error": "Failed to copy role."
+      },
       "roleDeleted": "Role deleted.",
       "roleDeleteError": "Failed to delete role.",
       "roleUpdated": "Role updated.",
@@ -188,11 +198,17 @@
     },
     "registrationsTitle": "User Registrations",
     "registrationsTotalFor": "Total registrations in the last {{period}}",
+    "registrationsTrendTitle": "Registration Trend",
+    "registrationsTrendCount": "Registrations",
     "range": {
       "day": "1 Day",
       "week": "1 Week",
       "month": "1 Month",
       "year": "1 Year"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "empty": "No recent activity."
     },
     "usersTitle": "Users",
     "usersHint": "Click a row to expand it and see that user's identity/role audit history from Keycloak.",
@@ -268,6 +284,21 @@
       "enabled": "User enabled.",
       "disabled": "User disabled.",
       "error": "Failed to update user status."
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "clearSelection": "Clear selection",
+      "assignRoles": "Add Roles",
+      "enable": "Enable",
+      "disable": "Disable",
+      "confirmDisable": "Disable {{count}} selected users? They will not be able to log in.",
+      "success": "Bulk update applied.",
+      "partialError": "{{count}} user(s) could not be updated.",
+      "assignRolesModal": {
+        "title": "Add roles to {{count}} users",
+        "placeholder": "Select roles to add",
+        "button": "Add"
+      }
     }
   },
   "notFound": {

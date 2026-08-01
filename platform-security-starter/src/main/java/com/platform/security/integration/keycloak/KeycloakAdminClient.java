@@ -81,4 +81,8 @@ public interface KeycloakAdminClient {
      * Keycloak's own event log - requires {@code adminEventsEnabled} on the realm. This is the
      * audit trail for Keycloak-owned data; nothing about it is ever cached locally. */
     List<AdminEvent> getUserAdminEvents(String keycloakUserId);
+
+    /** The realm's most recent admin events overall, not filtered to any one user - backs the
+     * admin panel's "Recent Activity" feed. Newest first, capped to limit. */
+    List<AdminEvent> getRecentAdminEvents(int limit);
 }

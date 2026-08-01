@@ -73,6 +73,10 @@ export function fetchAdminUserAuditEvents(accessToken: string, userId: string): 
   return apiFetch<AdminUserAuditEvent[]>(`/api/admin/users/${userId}/audit`, { accessToken });
 }
 
+export function fetchRecentActivity(accessToken: string, limit = 20): Promise<AdminUserAuditEvent[]> {
+  return apiFetch<AdminUserAuditEvent[]>(`/api/admin/activity?limit=${limit}`, { accessToken });
+}
+
 export function fetchRegistrationStats(accessToken: string, range: StatsRange): Promise<RegistrationStatsPoint[]> {
   return apiFetch<RegistrationStatsPoint[]>(`/api/admin/stats/registrations?range=${range}`, { accessToken });
 }

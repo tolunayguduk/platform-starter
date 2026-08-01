@@ -82,6 +82,10 @@ public interface AdminController {
     @GetMapping("/users/{id}/audit")
     List<AdminUserAuditEventDto> getUserAuditEvents(@PathVariable String id);
 
+    /** Realm-wide recent activity feed (not scoped to one user) - same admin event log. */
+    @GetMapping("/activity")
+    List<AdminUserAuditEventDto> getRecentActivity(@RequestParam(defaultValue = "20") int limit);
+
     /** e.g. { "report:list": "ENABLED", "billing:refund": "HIDDEN" } for this user's current
      * roles - the same computation /api/me/ui-permissions does for the caller, run for someone else. */
     @GetMapping("/users/{id}/ui-permissions")

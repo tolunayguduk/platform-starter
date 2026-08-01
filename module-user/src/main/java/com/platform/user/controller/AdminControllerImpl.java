@@ -99,6 +99,11 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
+    public List<AdminUserAuditEventDto> getRecentActivity(int limit) {
+        return adminUserMapper.toAuditEventDtoList(adminUserService.getRecentActivity(limit));
+    }
+
+    @Override
     public Map<String, String> getUserUiPermissions(String id) {
         return adminUserService.getUserUiPermissions(id);
     }

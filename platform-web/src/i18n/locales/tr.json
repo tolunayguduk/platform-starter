@@ -126,7 +126,9 @@
         "totalRoles": "Toplam Rol",
         "assignedRoles": "Atanmış Rol",
         "totalFunctions": "Toplam Fonksiyon",
-        "assignedFunctions": "Atanmış Fonksiyon"
+        "assignedFunctions": "Atanmış Fonksiyon",
+        "distributionTitle": "Rol Dağılımı",
+        "distributionEmpty": "Henüz hiçbir role kullanıcı atanmamış."
       },
       "descriptionPlaceholder": "Açıklama",
       "accessLevel": {
@@ -142,6 +144,14 @@
       "error": "Rolün fonksiyonları güncellenemedi.",
       "deleteRoleAction": "Sil",
       "confirmDeleteRole": "Bu rol silinsin mi? Bu, rolün tüm fonksiyon yetkilerini de kaldırır.",
+      "copyRoleAction": "Kopyala",
+      "copyRole": {
+        "title": "\"{{role}}\" rolünü yeni bir role kopyala",
+        "placeholder": "Yeni rol adı (örn. DESTEK_L2)",
+        "success": "Rol kopyalandı.",
+        "partialError": "Rol oluşturuldu, ancak {{count}} fonksiyon yetkisi kopyalanamadı.",
+        "error": "Rol kopyalanamadı."
+      },
       "roleDeleted": "Rol silindi.",
       "roleDeleteError": "Rol silinemedi.",
       "roleUpdated": "Rol güncellendi.",
@@ -188,11 +198,17 @@
     },
     "registrationsTitle": "Kayıt Olan Kullanıcılar",
     "registrationsTotalFor": "{{period}} içinde toplam kayıt",
+    "registrationsTrendTitle": "Kayıt Trendi",
+    "registrationsTrendCount": "Kayıt Sayısı",
     "range": {
       "day": "1 Gün",
       "week": "1 Hafta",
       "month": "1 Ay",
       "year": "1 Yıl"
+    },
+    "recentActivity": {
+      "title": "Son Aktiviteler",
+      "empty": "Henüz bir aktivite yok."
     },
     "usersTitle": "Kullanıcılar",
     "usersHint": "Bir satıra tıklayıp genişleterek o kullanıcının Keycloak'taki kimlik/rol audit geçmişini görebilirsiniz.",
@@ -268,6 +284,21 @@
       "enabled": "Kullanıcı etkinleştirildi.",
       "disabled": "Kullanıcı devre dışı bırakıldı.",
       "error": "Kullanıcı durumu güncellenemedi."
+    },
+    "bulk": {
+      "selectedCount": "{{count}} seçildi",
+      "clearSelection": "Seçimi temizle",
+      "assignRoles": "Rol Ekle",
+      "enable": "Etkinleştir",
+      "disable": "Devre Dışı Bırak",
+      "confirmDisable": "Seçili {{count}} kullanıcı devre dışı bırakılsın mı? Artık giriş yapamayacaklar.",
+      "success": "Toplu güncelleme uygulandı.",
+      "partialError": "{{count}} kullanıcı güncellenemedi.",
+      "assignRolesModal": {
+        "title": "{{count}} kullanıcıya rol ekle",
+        "placeholder": "Eklenecek rolleri seçin",
+        "button": "Ekle"
+      }
     }
   },
   "notFound": {

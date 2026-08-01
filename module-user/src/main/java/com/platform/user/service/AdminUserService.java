@@ -57,6 +57,10 @@ public interface AdminUserService {
      * event log rather than any local table. */
     List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId);
 
+    /** Realm-wide recent admin activity (not scoped to one user) - backs the admin panel's
+     * "Recent Activity" feed, same Keycloak admin event log as getUserAuditEvents. */
+    List<AdminUserAuditEventResult> getRecentActivity(int limit);
+
     /** Same computation UiPermissionsService already does for "me" (see UiPermissionsController),
      * run for this user's current roles instead - lets an admin see exactly which UI functions
      * this user's roles let them see/use, without duplicating the ENABLED/DISABLED/HIDDEN logic. */
