@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import type { AdminTable, AdminTableRows, AdminAuditRows, AdminUserAuditEvent, StatsRange, RegistrationStatsPoint } from '../types/admin';
-import type { AdminRole, AdminUser } from '../types/admin';
+import type { AdminRole, AdminUser, Organization, RoleScope } from '../types/admin';
 
 export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
   return apiFetch<AdminUser[]>('/api/admin/users', { accessToken });
@@ -34,8 +34,66 @@ export function updateRoleStatus(accessToken: string, name: string, enabled: boo
   });
 }
 
+export function updateRoleScope(accessToken: string, name: string, scope: RoleScope): Promise<void> {
+  return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}/scope`, {
+    method: 'PUT',
+    body: { scope },
+    accessToken,
+  });
+}
+
 export function deleteAdminRole(accessToken: string, name: string): Promise<void> {
   return apiFetch<void>(`/api/admin/roles/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
+export function fetchOrganizations(accessToken: string): Promise<Organization[]> {
+  return apiFetch<Organization[]>('/api/admin/organizations', { accessToken });
+}
+
+export function createOrganization(accessToken: string, name: string): Promise<Organization> {
+  return apiFetch<Organization>('/api/admin/organizations', {
+    method: 'POST',
+    body: { name },
+    accessToken,
+  });
+}
+
+export function updateOrganizationDescription(accessToken: string, id: string, description: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: { description },
+    accessToken,
+  });
+}
+
+export function deleteOrganization(accessToken: string, id: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
+export function fetchOrganizationMembers(accessToken: string, id: string): Promise<AdminUser[]> {
+  return apiFetch<AdminUser[]>(`/api/admin/organizations/${encodeURIComponent(id)}/members`, { accessToken });
+}
+
+/** Exact username/email lookup only, never a browse/search - backs the "add member" flow. */
+export function findUserByIdentifier(accessToken: string, identifier: string): Promise<AdminUser> {
+  return apiFetch<AdminUser>(`/api/admin/organizations/user-lookup?identifier=${encodeURIComponent(identifier)}`, { accessToken });
+}
+
+export function addOrganizationMember(accessToken: string, organizationId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`, {
+    method: 'PUT',
+    accessToken,
+  });
+}
+
+export function removeOrganizationMember(accessToken: string, organizationId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
     accessToken,
   });

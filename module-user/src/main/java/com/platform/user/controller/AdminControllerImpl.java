@@ -14,6 +14,7 @@ import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateRoleScopeRequestDto;
 import com.platform.user.controller.model.UpdateRoleStatusRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
@@ -32,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@adminAccessGuard.check(authentication)")
 public class AdminControllerImpl implements AdminController {
 
     private final AdminUserService adminUserService;
@@ -49,8 +50,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public List<AdminUserDto> listUsers() {
-        return adminUserMapper.toUserDtoList(adminUserService.listUsers());
+    public List<AdminUserDto> listUsers(Jwt jwt) {
+        return adminUserMapper.toUserDtoList(adminUserService.listUsers(jwt.getSubject()));
     }
 
     @Override
@@ -59,23 +60,28 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public void createRole(CreateRoleRequestDto request) {
-        adminUserService.createRole(request.name());
+    public void createRole(CreateRoleRequestDto request, Jwt jwt) {
+        adminUserService.createRole(request.name(), jwt.getSubject());
     }
 
     @Override
-    public void updateRoleDescription(String name, UpdateRoleDescriptionRequestDto request) {
-        adminUserService.updateRoleDescription(name, request.description());
+    public void updateRoleDescription(String name, UpdateRoleDescriptionRequestDto request, Jwt jwt) {
+        adminUserService.updateRoleDescription(name, request.description(), jwt.getSubject());
     }
 
     @Override
-    public void updateRoleStatus(String name, UpdateRoleStatusRequestDto request) {
-        adminUserService.updateRoleStatus(name, request.enabled());
+    public void updateRoleStatus(String name, UpdateRoleStatusRequestDto request, Jwt jwt) {
+        adminUserService.updateRoleStatus(name, request.enabled(), jwt.getSubject());
     }
 
     @Override
-    public void deleteRole(String name) {
-        adminUserService.deleteRole(name);
+    public void updateRoleScope(String name, UpdateRoleScopeRequestDto request, Jwt jwt) {
+        adminUserService.updateRoleScope(name, request.scope(), jwt.getSubject());
+    }
+
+    @Override
+    public void deleteRole(String name, Jwt jwt) {
+        adminUserService.deleteRole(name, jwt.getSubject());
     }
 
     @Override
@@ -129,17 +135,17 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public AdminRowDto updateRow(AdminTableKey key, String pk, UpdateAdminRowRequestDto request) {
-        return new AdminRowDto(adminTableService.updateRow(key, pk, request.changes()));
+    public AdminRowDto updateRow(AdminTableKey key, String pk, UpdateAdminRowRequestDto request, Jwt jwt) {
+        return new AdminRowDto(adminTableService.updateRow(key, pk, request.changes(), jwt.getSubject()));
     }
 
     @Override
-    public AdminRowDto createRow(AdminTableKey key, CreateAdminRowRequestDto request) {
-        return new AdminRowDto(adminTableService.createRow(key, request.values()));
+    public AdminRowDto createRow(AdminTableKey key, CreateAdminRowRequestDto request, Jwt jwt) {
+        return new AdminRowDto(adminTableService.createRow(key, request.values(), jwt.getSubject()));
     }
 
     @Override
-    public void deleteRow(AdminTableKey key, String pk) {
-        adminTableService.deleteRow(key, pk);
+    public void deleteRow(AdminTableKey key, String pk, Jwt jwt) {
+        adminTableService.deleteRow(key, pk, jwt.getSubject());
     }
 }

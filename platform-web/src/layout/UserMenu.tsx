@@ -4,6 +4,7 @@ import { UserOutlined, DownOutlined, SettingOutlined, LogoutOutlined, DashboardO
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import { useAdminAccessScope } from '../hooks/useAdminAccessScope';
 import styles from './UserMenu.module.css';
 
 /** The navbar's hover dropdown: username -> profile / settings / logout.
@@ -12,8 +13,9 @@ export function UserMenu({ textColor, overlayColor }: { textColor: string; overl
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { scope } = useAdminAccessScope();
 
-  const isAdmin = user?.roles.includes('ADMIN') ?? false;
+  const isAdmin = (scope?.platformScoped || scope?.organizationScoped) ?? false;
 
   const menuItems: MenuProps['items'] = [
     { key: 'settings', icon: <SettingOutlined />, label: t('nav.settings') },

@@ -14,6 +14,8 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [createOrganization, setCreateOrganization] = useState(false);
+  const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,7 +24,16 @@ export function RegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await register({ username, email, password, confirmPassword, firstName, lastName, termsAccepted });
+      await register({
+        username,
+        email,
+        password,
+        confirmPassword,
+        firstName,
+        lastName,
+        termsAccepted,
+        organizationName: createOrganization ? organizationName : undefined,
+      });
       navigate('/login', { replace: true });
     } catch (e) {
       setError(e instanceof ApiError ? e.body?.message ?? t('register.errorFailed') : t('register.errorUnexpected'));
@@ -60,6 +71,25 @@ export function RegisterPage() {
           {t('register.confirmPassword')}
           <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
         </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={createOrganization}
+            onChange={(e) => setCreateOrganization(e.target.checked)}
+          />
+          {t('register.createOrganization')}
+        </label>
+        {createOrganization && (
+          <label>
+            {t('register.organizationName')}
+            <input
+              type="text"
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
+              required
+            />
+          </label>
+        )}
         <label>
           <input
             type="checkbox"

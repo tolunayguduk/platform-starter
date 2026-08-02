@@ -3,9 +3,16 @@ import { App, Button, Card, Col, Input, Popconfirm, Row, Segmented, Space, Table
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
 import { ApiError } from '../../../api/client';
-import { deleteAdminRole, fetchAdminRoles, fetchAdminUsers, updateRoleDescription, updateRoleStatus } from '../../../api/adminApi';
-import type { AdminRole } from '../../../types/admin';
-import { PROTECTED_ROLE } from './constants';
+import {
+  deleteAdminRole,
+  fetchAdminRoles,
+  fetchAdminUsers,
+  updateRoleDescription,
+  updateRoleScope,
+  updateRoleStatus,
+} from '../../../api/adminApi';
+import type { AdminRole, RoleScope } from '../../../types/admin';
+import { ROLE_SCOPE_OPTIONS } from './constants';
 import { AddRoleModal } from './AddRoleModal';
 import { CopyRoleModal } from './CopyRoleModal';
 import { RoleFunctionsPanel } from './RoleFunctionsPanel';
@@ -28,6 +35,7 @@ export function RoleFunctionManager() {
   const [deletingRole, setDeletingRole] = useState<string | null>(null);
   const [savingDescriptionFor, setSavingDescriptionFor] = useState<string | null>(null);
   const [savingStatusFor, setSavingStatusFor] = useState<string | null>(null);
+  const [savingScopeFor, setSavingScopeFor] = useState<string | null>(null);
 
   function loadRoles() {
     if (!accessToken) return;
@@ -101,6 +109,22 @@ export function RoleFunctionManager() {
     }
   }
 
+  async function handleRoleScopeChange(role: AdminRole, scope: RoleScope) {
+    if (!accessToken) return;
+    setSavingScopeFor(role.name);
+    try {
+      await updateRoleScope(accessToken, role.name, scope);
+      message.success(t('admin.roleFunctions.scopeUpdated'));
+      loadRoles();
+    } catch (e) {
+      message.error(
+        e instanceof ApiError ? (e.body?.message ?? t('admin.roleFunctions.scopeUpdateError')) : t('admin.roleFunctions.scopeUpdateError'),
+      );
+    } finally {
+      setSavingScopeFor(null);
+    }
+  }
+
   const visibleRoles = roles.filter(
     (role) =>
       role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
@@ -157,6 +181,34 @@ export function RoleFunctionManager() {
                   render: (_: unknown, role: AdminRole) => roleUserCounts[role.name] ?? 0,
                 },
                 {
+                  title: t('admin.roleFunctions.column.scope'),
+                  key: 'scope',
+                  width: 220,
+                  render: (_: unknown, role: AdminRole) => (
+                    <Segmented
+                      size="small"
+                      value={role.scope}
+                      disabled={savingScopeFor === role.name}
+                      onChange={(value) => {
+                        const scope = value as RoleScope;
+                        if (scope === 'PLATFORM') {
+                          modal.confirm({
+                            title: t('admin.roleFunctions.confirmPlatformScope'),
+                            content: t('admin.roleFunctions.confirmPlatformScopeDetail'),
+                            okButtonProps: { danger: true },
+                            okText: t('admin.roleFunctions.scope.PLATFORM'),
+                            cancelText: t('admin.editRow.cancel'),
+                            onOk: () => handleRoleScopeChange(role, scope),
+                          });
+                          return;
+                        }
+                        handleRoleScopeChange(role, scope);
+                      }}
+                      options={ROLE_SCOPE_OPTIONS.map((scope) => ({ label: t(`admin.roleFunctions.scope.${scope}`), value: scope }))}
+                    />
+                  ),
+                },
+                {
                   title: t('admin.column.status'),
                   key: 'status',
                   width: 160,
@@ -197,9 +249,8 @@ export function RoleFunctionManager() {
                       <Popconfirm
                         title={t('admin.roleFunctions.confirmDeleteRole')}
                         onConfirm={() => handleDeleteRole(role.name)}
-                        disabled={role.name === PROTECTED_ROLE}
                       >
-                        <Button size="small" danger disabled={role.name === PROTECTED_ROLE} loading={deletingRole === role.name}>
+                        <Button size="small" danger loading={deletingRole === role.name}>
                           {t('admin.roleFunctions.deleteRoleAction')}
                         </Button>
                       </Popconfirm>

@@ -5,6 +5,7 @@ import { useAuth } from '../../../store/AuthContext';
 import { ApiError } from '../../../api/client';
 import { updateUserIdentity, updateUserRoles } from '../../../api/adminApi';
 import type { AdminRole, AdminUser } from '../../../types/admin';
+import { buildRoleSelectOptions } from './roleSelectOptions';
 
 function sameRoleSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
@@ -17,11 +18,12 @@ interface EditUserModalProps {
   user: AdminUser;
   isSelf: boolean;
   availableRoles: AdminRole[];
+  callerIsPlatformScoped: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function EditUserModal({ open, user, isSelf, availableRoles, onClose, onSaved }: EditUserModalProps) {
+export function EditUserModal({ open, user, isSelf, availableRoles, callerIsPlatformScoped, onClose, onSaved }: EditUserModalProps) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
@@ -114,14 +116,7 @@ export function EditUserModal({ open, user, isSelf, availableRoles, onClose, onS
             label={t('admin.editUser.fields.roles')}
             extra={isSelf ? t('admin.editUser.selfRoleHint') : undefined}
           >
-            <Select
-              mode="multiple"
-              options={availableRoles.map((r) => ({
-                value: r.name,
-                label: r.enabled ? r.name : t('admin.editUser.roleDisabledLabel', { role: r.name }),
-                disabled: !r.enabled,
-              }))}
-            />
+            <Select mode="multiple" options={buildRoleSelectOptions(availableRoles, callerIsPlatformScoped, t)} />
           </Form.Item>
         </Form>
       ) : hasChanges ? (

@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
 import { updateUserRoles } from '../../../api/adminApi';
 import type { AdminRole, AdminUser } from '../../../types/admin';
+import { buildRoleSelectOptions } from './roleSelectOptions';
 
 interface BulkAssignRolesModalProps {
   open: boolean;
   users: AdminUser[];
   availableRoles: AdminRole[];
+  callerIsPlatformScoped: boolean;
   onClose: () => void;
   onDone: () => void;
 }
@@ -16,7 +18,7 @@ interface BulkAssignRolesModalProps {
 /** Additive only - picked roles are unioned onto each selected user's existing roles, never
  * replacing what they already have. A destructive bulk "set roles to exactly X" is a much easier
  * way to accidentally strip access from people outside the intended change. */
-export function BulkAssignRolesModal({ open, users, availableRoles, onClose, onDone }: BulkAssignRolesModalProps) {
+export function BulkAssignRolesModal({ open, users, availableRoles, callerIsPlatformScoped, onClose, onDone }: BulkAssignRolesModalProps) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
@@ -64,11 +66,7 @@ export function BulkAssignRolesModal({ open, users, availableRoles, onClose, onD
           <Select
             mode="multiple"
             placeholder={t('admin.bulk.assignRolesModal.placeholder')}
-            options={availableRoles.map((r) => ({
-              value: r.name,
-              label: r.enabled ? r.name : t('admin.editUser.roleDisabledLabel', { role: r.name }),
-              disabled: !r.enabled,
-            }))}
+            options={buildRoleSelectOptions(availableRoles, callerIsPlatformScoped, t)}
           />
         </Form.Item>
       </Form>

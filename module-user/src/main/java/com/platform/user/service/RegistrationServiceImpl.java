@@ -4,6 +4,7 @@ import com.platform.error.BusinessException;
 import com.platform.error.TechnicalException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
+import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.user.entity.UserConsent;
 import com.platform.user.entity.UserProfile;
 import com.platform.user.repository.UserConsentRepository;
@@ -11,6 +12,7 @@ import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.RegisterUserCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,16 +23,24 @@ public class RegistrationServiceImpl implements RegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationServiceImpl.class);
 
+    /** Every self-registered user with no organization gets this - Keycloak's own
+     * "default-roles-<realm>" composite doesn't expand into the JWT's realm_access.roles claim,
+     * so it has to be assigned directly (see the comment further down). */
+    private static final String DEFAULT_ROLE = "USER";
+
     private final KeycloakAdminClient keycloakAdminClient;
     private final UserProfileRepository userProfileRepository;
     private final UserConsentRepository userConsentRepository;
+    private final String organizationAdminRole;
 
     public RegistrationServiceImpl(KeycloakAdminClient keycloakAdminClient,
                                     UserProfileRepository userProfileRepository,
-                                    UserConsentRepository userConsentRepository) {
+                                    UserConsentRepository userConsentRepository,
+                                    @Value("${platform.registration.organization-admin-role:MANAGER}") String organizationAdminRole) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.userProfileRepository = userProfileRepository;
         this.userConsentRepository = userConsentRepository;
+        this.organizationAdminRole = organizationAdminRole;
     }
 
     @Override
@@ -51,11 +61,25 @@ public class RegistrationServiceImpl implements RegistrationService {
             throw new BusinessException("AUTHZ-4090", "error.register.already_exists",
                     "Username or email already registered: " + e.getMessage());
         }
+        String organizationName = command.organizationName() == null ? null : command.organizationName().trim();
+        boolean creatingOrganization = organizationName != null && !organizationName.isEmpty();
+        String createdGroupId = null;
         try {
-            // Keycloak's realm_access.roles JWT claim does NOT expand the "default-roles-<realm>"
-            // composite it auto-assigns on user creation - USER never actually appears in a
-            // token unless granted directly, so the permission matrix would never match it.
-            keycloakAdminClient.assignRealmRole(keycloakUserId, "USER");
+            if (creatingOrganization) {
+                // Becomes the new organization's admin instead of a plain end user - which role
+                // that means is a deployment decision (platform.registration.organization-admin-role),
+                // never a name this class hardcodes. It must already be an ORGANIZATION-scoped role
+                // (see RoleScope) for the admin panel to actually let them in.
+                keycloakAdminClient.assignRealmRole(keycloakUserId, organizationAdminRole);
+                KeycloakGroup group = keycloakAdminClient.createGroup(organizationName);
+                createdGroupId = group.id();
+                keycloakAdminClient.addUserToGroup(keycloakUserId, createdGroupId);
+            } else {
+                // Keycloak's realm_access.roles JWT claim does NOT expand the "default-roles-<realm>"
+                // composite it auto-assigns on user creation - USER never actually appears in a
+                // token unless granted directly, so the permission matrix would never match it.
+                keycloakAdminClient.assignRealmRole(keycloakUserId, DEFAULT_ROLE);
+            }
 
             UserProfile profile = new UserProfile();
             profile.setKeycloakUserId(keycloakUserId);
@@ -70,14 +94,31 @@ public class RegistrationServiceImpl implements RegistrationService {
             consent.setGrantedAt(Instant.now());
             consent.setIpAddress(command.clientIp());
             userConsentRepository.save(consent);
+        } catch (BusinessException e) {
+            // e.g. the chosen organization name is already taken (AUTHZ-4094) - a genuine,
+            // expected rejection, not a technical failure. Still rolls back the user (no dangling
+            // unclaimed account), but the caller sees the real reason, not a generic 500.
+            cleanupAfterFailure(keycloakUserId, createdGroupId);
+            throw e;
         } catch (RuntimeException e) {
-            try {
-                keycloakAdminClient.deleteUser(keycloakUserId);
-            } catch (RuntimeException cleanupFailure) {
-                log.error("Failed to compensate Keycloak user {} after local registration failure", keycloakUserId, cleanupFailure);
-            }
+            cleanupAfterFailure(keycloakUserId, createdGroupId);
             throw new TechnicalException("USER-5001",
                     "Local registration rows failed after Keycloak user creation for " + keycloakUserId, e);
+        }
+    }
+
+    private void cleanupAfterFailure(String keycloakUserId, String createdGroupId) {
+        if (createdGroupId != null) {
+            try {
+                keycloakAdminClient.deleteGroup(createdGroupId);
+            } catch (RuntimeException cleanupFailure) {
+                log.error("Failed to compensate Keycloak group {} after local registration failure", createdGroupId, cleanupFailure);
+            }
+        }
+        try {
+            keycloakAdminClient.deleteUser(keycloakUserId);
+        } catch (RuntimeException cleanupFailure) {
+            log.error("Failed to compensate Keycloak user {} after local registration failure", keycloakUserId, cleanupFailure);
         }
     }
 

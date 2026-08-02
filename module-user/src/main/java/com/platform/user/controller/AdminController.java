@@ -1,6 +1,7 @@
 package com.platform.user.controller;
 
 import com.platform.user.constant.AdminTableKey;
+import com.platform.user.constant.RoleScope;
 import com.platform.user.constant.StatsRange;
 import com.platform.user.controller.model.AdminAuditRowsDto;
 import com.platform.user.controller.model.AdminRoleDto;
@@ -14,6 +15,7 @@ import com.platform.user.controller.model.CreateRoleRequestDto;
 import com.platform.user.controller.model.RegistrationStatsPointDto;
 import com.platform.user.controller.model.UpdateAdminRowRequestDto;
 import com.platform.user.controller.model.UpdateRoleDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateRoleScopeRequestDto;
 import com.platform.user.controller.model.UpdateRoleStatusRequestDto;
 import com.platform.user.controller.model.UpdateUserIdentityRequestDto;
 import com.platform.user.controller.model.UpdateUserRolesRequestDto;
@@ -34,36 +36,47 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Admin panel: user list/roles and registration stats. Gated on the ADMIN realm role directly
- * (not the fine-grained permission matrix - this is a role check, not a per-action permission).
+ * Admin panel: user list/roles and registration stats. Gated on holding at least one
+ * admin-panel-eligible role (see AdminAccessGuard/AdminAccessScopeService) - never a hardcoded
+ * role name; PLATFORM-scope callers are unrestricted, ORGANIZATION-scope callers are confined to
+ * their own organization(s) at the service layer.
  */
 @RequestMapping("/api/admin")
 public interface AdminController {
 
     @GetMapping("/users")
-    List<AdminUserDto> listUsers();
+    List<AdminUserDto> listUsers(@AuthenticationPrincipal Jwt jwt);
 
     /** Every realm role this application manages, with its Keycloak-stored description - backs the
      * role picker in the role-function manager (and anywhere else the admin panel needs the live
-     * set of assignable roles). */
+     * set of assignable roles). Not scope-filtered - see AdminUserService.listManagedRoles. */
     @GetMapping("/roles")
     List<AdminRoleDto> listManagedRoles();
 
-    /** Defines a brand new role in Keycloak. */
+    /** Defines a brand new role in Keycloak (PLATFORM-scope only). */
     @PostMapping("/roles")
-    void createRole(@RequestBody CreateRoleRequestDto request);
+    void createRole(@RequestBody CreateRoleRequestDto request, @AuthenticationPrincipal Jwt jwt);
 
-    /** Updates a role's description - purely descriptive, no authorization meaning. */
+    /** Updates a role's description - purely descriptive, no authorization meaning (PLATFORM-scope only). */
     @PutMapping("/roles/{name}")
-    void updateRoleDescription(@PathVariable String name, @RequestBody UpdateRoleDescriptionRequestDto request);
+    void updateRoleDescription(@PathVariable String name, @RequestBody UpdateRoleDescriptionRequestDto request,
+                                @AuthenticationPrincipal Jwt jwt);
 
-    /** Temporarily disables/re-enables a role - see AdminUserService.updateRoleStatus. */
+    /** Temporarily disables/re-enables a role (PLATFORM-scope only) - see AdminUserService.updateRoleStatus. */
     @PutMapping("/roles/{name}/status")
-    void updateRoleStatus(@PathVariable String name, @RequestBody UpdateRoleStatusRequestDto request);
+    void updateRoleStatus(@PathVariable String name, @RequestBody UpdateRoleStatusRequestDto request,
+                           @AuthenticationPrincipal Jwt jwt);
 
-    /** Deletes a role entirely and cleans up its function grants. Rejects the ADMIN role. */
+    /** Sets whether a role reaches the whole platform or just its holders' own organization(s) -
+     * PLATFORM-scope only. See RoleScope. */
+    @PutMapping("/roles/{name}/scope")
+    void updateRoleScope(@PathVariable String name, @RequestBody UpdateRoleScopeRequestDto request,
+                         @AuthenticationPrincipal Jwt jwt);
+
+    /** Deletes a role entirely and cleans up its function grants (PLATFORM-scope only). Rejects
+     * removing the last enabled PLATFORM-scope role. */
     @DeleteMapping("/roles/{name}")
-    void deleteRole(@PathVariable String name);
+    void deleteRole(@PathVariable String name, @AuthenticationPrincipal Jwt jwt);
 
     @PutMapping("/users/{id}/roles")
     void updateUserRoles(@PathVariable String id, @RequestBody UpdateUserRolesRequestDto request,
@@ -105,16 +118,18 @@ public interface AdminController {
     @GetMapping("/tables/{key}/rows/{pk}/audit")
     AdminAuditRowsDto getAuditRows(@PathVariable AdminTableKey key, @PathVariable String pk);
 
-    /** Main-table rows only - never targets an audit table (there is no AdminTableKey for one). */
+    /** Main-table rows only - never targets an audit table (there is no AdminTableKey for one).
+     * Writing to PERMISSION or ROLE_PERMISSION is PLATFORM-scope only. */
     @PatchMapping("/tables/{key}/rows/{pk}")
     AdminRowDto updateRow(@PathVariable AdminTableKey key, @PathVariable String pk,
-                          @RequestBody UpdateAdminRowRequestDto request);
+                          @RequestBody UpdateAdminRowRequestDto request, @AuthenticationPrincipal Jwt jwt);
 
-    /** Only ROLE_PERMISSION supports this today (granting a function to a role). */
+    /** Only ROLE_PERMISSION supports this today (granting a function to a role). PLATFORM-scope only. */
     @PostMapping("/tables/{key}/rows")
-    AdminRowDto createRow(@PathVariable AdminTableKey key, @RequestBody CreateAdminRowRequestDto request);
+    AdminRowDto createRow(@PathVariable AdminTableKey key, @RequestBody CreateAdminRowRequestDto request,
+                          @AuthenticationPrincipal Jwt jwt);
 
-    /** Only ROLE_PERMISSION supports this today (revoking a function from a role). */
+    /** Only ROLE_PERMISSION supports this today (revoking a function from a role). PLATFORM-scope only. */
     @DeleteMapping("/tables/{key}/rows/{pk}")
-    void deleteRow(@PathVariable AdminTableKey key, @PathVariable String pk);
+    void deleteRow(@PathVariable AdminTableKey key, @PathVariable String pk, @AuthenticationPrincipal Jwt jwt);
 }

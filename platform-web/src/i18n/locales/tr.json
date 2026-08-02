@@ -24,6 +24,8 @@
     "email": "E-posta",
     "password": "Şifre",
     "confirmPassword": "Şifre (Tekrar)",
+    "createOrganization": "Bir organizasyon oluşturmak istiyorum",
+    "organizationName": "Organizasyon Adı",
     "termsAccepted": "Kullanım şartlarını kabul ediyorum",
     "submit": "Kayıt Ol",
     "errorFailed": "Kayıt başarısız.",
@@ -107,6 +109,7 @@
     "title": "Admin Paneli",
     "tab": {
       "user": "Kullanıcı",
+      "organizations": "Organizasyonlar",
       "roleFunctions": "Rol-Fonksiyon"
     },
     "roleFunctions": {
@@ -120,8 +123,18 @@
         "description": "Açıklama",
         "accessLevel": "Erişim",
         "uiPolicy": "Varsayılan Davranış",
-        "userCount": "Kullanıcı Sayısı"
+        "userCount": "Kullanıcı Sayısı",
+        "scope": "Admin Paneli Erişimi"
       },
+      "scope": {
+        "NONE": "Yok",
+        "ORGANIZATION": "Organizasyon",
+        "PLATFORM": "Platform"
+      },
+      "confirmPlatformScope": "Bu role platform genelinde admin yetkisi verilsin mi?",
+      "confirmPlatformScopeDetail": "Bu role sahip her kullanıcı, sadece kendi organizasyonunu değil, tüm organizasyonları görüp yönetebilecek.",
+      "scopeUpdated": "Admin paneli erişimi güncellendi.",
+      "scopeUpdateError": "Admin paneli erişimi güncellenemedi.",
       "stats": {
         "totalRoles": "Toplam Rol",
         "assignedRoles": "Atanmış Rol",
@@ -196,6 +209,42 @@
         "DISABLE_IF_DENIED": "Varsayılan olarak görünür, tıklanamaz"
       }
     },
+    "organizations": {
+      "title": "Organizasyonlar",
+      "hint": "Bir organizasyon admini sadece kendi organizasyonunu/organizasyonlarını görür ve yönetir - başka bir organizasyonun kullanıcılarını veya verisini asla görmez.",
+      "search": "Organizasyon ara...",
+      "column": {
+        "name": "Organizasyon",
+        "description": "Açıklama",
+        "memberCount": "Üye Sayısı"
+      },
+      "updated": "Organizasyon güncellendi.",
+      "updateError": "Organizasyon güncellenemedi.",
+      "deleted": "Organizasyon silindi.",
+      "deleteError": "Organizasyon silinemedi.",
+      "confirmDelete": "Bu organizasyon silinsin mi? Üyeleri sadece üyelikten çıkarılır, hiçbir kullanıcı silinmez.",
+      "error": "Organizasyon üyeliği güncellenemedi.",
+      "newOrganization": {
+        "title": "Yeni organizasyon oluştur",
+        "placeholder": "Organizasyon adı",
+        "button": "Organizasyon Ekle",
+        "success": "Organizasyon oluşturuldu.",
+        "error": "Organizasyon oluşturulamadı."
+      },
+      "addMember": {
+        "button": "Üye Ekle",
+        "title": "Üye ekle",
+        "placeholder": "Tam kullanıcı adı veya e-posta",
+        "searchButton": "Ara",
+        "notFound": "Bu kullanıcı adı veya e-postayla eşleşen kullanıcı yok.",
+        "alreadyMember": "Zaten üye",
+        "confirmButton": "Organizasyona ekle"
+      },
+      "memberAdded": "Üye eklendi.",
+      "memberRemoved": "Üye çıkarıldı.",
+      "confirmRemoveMember": "Bu üye organizasyondan çıkarılsın mı?",
+      "removeMemberAction": "Çıkar"
+    },
     "registrationsTitle": "Kayıt Olan Kullanıcılar",
     "registrationsTotalFor": "{{period}} içinde toplam kayıt",
     "registrationsTrendTitle": "Kayıt Trendi",
@@ -268,6 +317,7 @@
       },
       "selfRoleHint": "Kendi ADMIN rolünüzü kaldıramazsınız.",
       "roleDisabledLabel": "{{role}} (devre dışı)",
+      "rolePlatformOnlyLabel": "{{role}} (sadece platform admini)",
       "success": "Kullanıcı güncellendi.",
       "error": "Kullanıcı güncellenemedi."
     },

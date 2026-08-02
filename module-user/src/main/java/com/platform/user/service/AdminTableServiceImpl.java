@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -87,6 +88,7 @@ public class AdminTableServiceImpl implements AdminTableService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final RoleStateRepository roleStateRepository;
+    private final AdminAccessScopeService adminAccessScopeService;
     private final ApplicationEventPublisher eventPublisher;
 
     public AdminTableServiceImpl(JdbcTemplate jdbcTemplate,
@@ -96,6 +98,7 @@ public class AdminTableServiceImpl implements AdminTableService {
                                   PermissionRepository permissionRepository,
                                   RolePermissionRepository rolePermissionRepository,
                                   RoleStateRepository roleStateRepository,
+                                  AdminAccessScopeService adminAccessScopeService,
                                   ApplicationEventPublisher eventPublisher) {
         this.jdbcTemplate = jdbcTemplate;
         this.userProfileRepository = userProfileRepository;
@@ -104,7 +107,20 @@ public class AdminTableServiceImpl implements AdminTableService {
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.roleStateRepository = roleStateRepository;
+        this.adminAccessScopeService = adminAccessScopeService;
         this.eventPublisher = eventPublisher;
+    }
+
+    /** PERMISSION/ROLE_PERMISSION are the role/function definitions themselves - organization
+     * admins manage user↔role assignment and their own organization's membership, never these. */
+    private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_KEYS =
+            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION);
+
+    private void requirePlatformScopeIfRestricted(AdminTableKey key, String callerKeycloakUserId) {
+        if (PLATFORM_SCOPE_ONLY_KEYS.contains(key) && !adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
+            throw new BusinessException("ADMIN-4008", "error.admin.platform_scope_required",
+                    "Only a platform-scope admin can modify " + key);
+        }
     }
 
     @Override
@@ -139,7 +155,8 @@ public class AdminTableServiceImpl implements AdminTableService {
 
     @Override
     @Transactional
-    public Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes) {
+    public Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes, String callerKeycloakUserId) {
+        requirePlatformScopeIfRestricted(key, callerKeycloakUserId);
         TableMeta meta = REGISTRY.get(key);
         for (String field : changes.keySet()) {
             if (!meta.editableColumns().contains(field)) {
@@ -167,7 +184,8 @@ public class AdminTableServiceImpl implements AdminTableService {
 
     @Override
     @Transactional
-    public Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values) {
+    public Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values, String callerKeycloakUserId) {
+        requirePlatformScopeIfRestricted(key, callerKeycloakUserId);
         TableMeta meta = REGISTRY.get(key);
 
         String newId;
@@ -190,7 +208,8 @@ public class AdminTableServiceImpl implements AdminTableService {
 
     @Override
     @Transactional
-    public void deleteRow(AdminTableKey key, String primaryKeyValue) {
+    public void deleteRow(AdminTableKey key, String primaryKeyValue, String callerKeycloakUserId) {
+        requirePlatformScopeIfRestricted(key, callerKeycloakUserId);
         switch (key) {
             case PERMISSION -> deletePermission(primaryKeyValue);
             case ROLE_PERMISSION -> deleteRolePermission(primaryKeyValue);

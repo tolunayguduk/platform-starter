@@ -1,15 +1,17 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../store/AuthContext';
+import { useAdminAccessScope } from '../hooks/useAdminAccessScope';
 
-/** Nest inside RequireAuth - assumes accessToken/isLoading are already handled there. */
+/** Nest inside RequireAuth - assumes accessToken/isLoading are already handled there. Gated on
+ * GET /api/me/admin-scope (platform- or organization-scoped), never a hardcoded role name - see
+ * AdminAccessScopeService on the backend for the same rule enforced server-side. */
 export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { scope, loading } = useAdminAccessScope();
 
-  if (!user) {
-    return null; // profile still loading
+  if (loading) {
+    return null; // scope still loading
   }
-  if (!user.roles.includes('ADMIN')) {
+  if (!scope?.platformScoped && !scope?.organizationScoped) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;

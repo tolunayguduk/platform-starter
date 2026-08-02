@@ -4,6 +4,7 @@ import com.platform.error.BusinessException;
 import com.platform.error.TechnicalException;
 import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
+import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.security.integration.keycloak.model.KeycloakUser;
 import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
@@ -344,5 +345,148 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
                 .sorted((a, b) -> Long.compare(b.time(), a.time()))
                 .limit(limit)
                 .toList();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public List<KeycloakGroup> listGroups() {
+        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/groups")
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<KeycloakGroupRepresentation>>() {
+                });
+        return groups == null ? List.of() : groups.stream().map(this::toGroup).toList();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public KeycloakGroup createGroup(String name) {
+        URI location = restClient.post().uri("/groups")
+                .body(Map.of("name", name))
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    if (response.getStatusCode().value() == 409) {
+                        throw new BusinessException("AUTHZ-4094",
+                                "error.admin.organization_exists", "Keycloak rejected duplicate organization name: " + name);
+                    }
+                    throw new TechnicalException("AUTHZ-4011",
+                            "Keycloak admin API rejected group creation: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity()
+                .getHeaders()
+                .getLocation();
+
+        if (location == null) {
+            throw new TechnicalException("AUTHZ-5001", "Keycloak did not return a Location header for the created group");
+        }
+        String path = location.getPath();
+        String id = path.substring(path.lastIndexOf('/') + 1);
+        return new KeycloakGroup(id, name, null);
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void updateGroupDescription(String groupId, String description) {
+        // PUT /groups/{id} replaces the whole representation - name is required even though only
+        // the description is changing, so the current one has to be fetched first.
+        KeycloakGroupRepresentation current = restClient.get().uri("/groups/{id}", groupId)
+                .retrieve()
+                .body(KeycloakGroupRepresentation.class);
+        if (current == null) {
+            throw new TechnicalException("AUTHZ-4012", "Keycloak group not found: " + groupId);
+        }
+        Map<String, Object> body = Map.of(
+                "name", current.name(),
+                "attributes", Map.of("description", List.of(description == null ? "" : description))
+        );
+        restClient.put().uri("/groups/{id}", groupId)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4013",
+                            "Keycloak admin API rejected group update: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void deleteGroup(String groupId) {
+        restClient.delete().uri("/groups/{id}", groupId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4014",
+                            "Keycloak admin API rejected group deletion of " + groupId + ": HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public List<KeycloakUserId> getGroupMembers(String groupId) {
+        List<KeycloakUserId> members = restClient.get().uri("/groups/{id}/members?max={max}", groupId, MAX_USERS_PAGE_SIZE)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<KeycloakUserId>>() {
+                });
+        return members == null ? List.of() : members;
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public List<KeycloakGroup> getUserGroups(String keycloakUserId) {
+        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/users/{id}/groups", keycloakUserId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<KeycloakGroupRepresentation>>() {
+                });
+        return groups == null ? List.of() : groups.stream().map(this::toGroup).toList();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void addUserToGroup(String keycloakUserId, String groupId) {
+        restClient.put().uri("/users/{userId}/groups/{groupId}", keycloakUserId, groupId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4015",
+                            "Keycloak admin API rejected adding user " + keycloakUserId + " to group " + groupId
+                                    + ": HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void removeUserFromGroup(String keycloakUserId, String groupId) {
+        restClient.method(HttpMethod.DELETE).uri("/users/{userId}/groups/{groupId}", keycloakUserId, groupId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new TechnicalException("AUTHZ-4016",
+                            "Keycloak admin API rejected removing user " + keycloakUserId + " from group " + groupId
+                                    + ": HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    private KeycloakGroup toGroup(KeycloakGroupRepresentation representation) {
+        String description = null;
+        if (representation.attributes() != null) {
+            List<String> values = representation.attributes().get("description");
+            if (values != null && !values.isEmpty()) {
+                description = values.get(0);
+            }
+        }
+        return new KeycloakGroup(representation.id(), representation.name(), description);
+    }
+
+    /** Raw shape of Keycloak's GroupRepresentation - only the fields this app reads. Kept private
+     * to this class so every KeycloakAdminClient caller only ever sees the flattened KeycloakGroup. */
+    private record KeycloakGroupRepresentation(String id, String name, Map<String, List<String>> attributes) {
     }
 }

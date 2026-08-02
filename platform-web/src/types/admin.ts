@@ -8,10 +8,31 @@ export interface AdminUser {
   roles: string[];
 }
 
+/** How far a role's authority reaches into the admin panel. NONE = not an admin-panel role at
+ * all (the default for every newly created role); ORGANIZATION = confined to the holder's own
+ * organization(s); PLATFORM = unrestricted. */
+export type RoleScope = 'NONE' | 'ORGANIZATION' | 'PLATFORM';
+
 export interface AdminRole {
   name: string;
   description: string | null;
   enabled: boolean;
+  scope: RoleScope;
+}
+
+/** An organization is a Keycloak Group - see AdminOrganizationService on the backend. */
+export interface Organization {
+  id: string;
+  name: string;
+  description: string | null;
+  memberCount: number;
+}
+
+/** Whether the current user can reach the admin panel at all, and how far - see
+ * AdminAccessScopeService / GET /api/me/admin-scope. */
+export interface AdminAccessScope {
+  platformScoped: boolean;
+  organizationScoped: boolean;
 }
 
 export interface AdminUserAuditEvent {

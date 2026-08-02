@@ -18,6 +18,9 @@ export interface RegisterFields {
   firstName: string;
   lastName: string;
   termsAccepted: boolean;
+  /** Omitted/blank -> registers as a plain user. Present -> creates a new organization and the
+   * registrant becomes its admin (see RegistrationServiceImpl on the backend). */
+  organizationName?: string;
 }
 
 export interface CurrentUser {

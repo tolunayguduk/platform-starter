@@ -2,6 +2,7 @@ import { useEffect, useState, type Key } from 'react';
 import { App, Button, Card, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
+import { useAdminAccessScope } from '../../../hooks/useAdminAccessScope';
 import { ApiError } from '../../../api/client';
 import { fetchAdminRoles, fetchAdminUsers, updateUserStatus } from '../../../api/adminApi';
 import type { AdminRole, AdminUser } from '../../../types/admin';
@@ -18,6 +19,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
   const { accessToken, user: currentUser } = useAuth();
+  const { scope } = useAdminAccessScope();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,6 +227,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
           user={editingUser}
           isSelf={editingUser.username === currentUser?.username}
           availableRoles={roles}
+          callerIsPlatformScoped={scope?.platformScoped ?? false}
           onClose={() => setEditingUser(null)}
           onSaved={loadUsers}
         />
@@ -233,6 +236,7 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
         open={bulkAssignOpen}
         users={selectedUsers}
         availableRoles={roles}
+        callerIsPlatformScoped={scope?.platformScoped ?? false}
         onClose={() => setBulkAssignOpen(false)}
         onDone={() => {
           setBulkAssignOpen(false);

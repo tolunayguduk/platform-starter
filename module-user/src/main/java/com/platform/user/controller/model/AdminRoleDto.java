@@ -1,4 +1,6 @@
 package com.platform.user.controller.model;
 
-public record AdminRoleDto(String name, String description, boolean enabled) {
+import com.platform.user.constant.RoleScope;
+
+public record AdminRoleDto(String name, String description, boolean enabled, RoleScope scope) {
 }

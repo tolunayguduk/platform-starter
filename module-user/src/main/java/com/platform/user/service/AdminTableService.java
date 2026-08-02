@@ -23,14 +23,16 @@ public interface AdminTableService {
     AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue);
 
     /** Applies only the fields present in {@code changes} (partial update) - every other column
-     * is left untouched. Rejects any column not in that table's editable set. */
-    Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes);
+     * is left untouched. Rejects any column not in that table's editable set. Writing to
+     * PERMISSION or ROLE_PERMISSION (the role/function definitions) is PLATFORM-scope only - see
+     * AdminAccessScopeService; every other table is unrestricted here. */
+    Map<String, Object> updateRow(AdminTableKey key, String primaryKeyValue, Map<String, Object> changes, String callerKeycloakUserId);
 
     /** Only ROLE_PERMISSION supports this today (granting a function to a role) - every other
-     * table throws error.admin.create_not_supported. */
-    Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values);
+     * table throws error.admin.create_not_supported. PLATFORM-scope only. */
+    Map<String, Object> createRow(AdminTableKey key, Map<String, Object> values, String callerKeycloakUserId);
 
     /** Only ROLE_PERMISSION supports this today (revoking a function from a role) - every other
-     * table throws error.admin.delete_not_supported. */
-    void deleteRow(AdminTableKey key, String primaryKeyValue);
+     * table throws error.admin.delete_not_supported. PLATFORM-scope only. */
+    void deleteRow(AdminTableKey key, String primaryKeyValue, String callerKeycloakUserId);
 }

@@ -24,6 +24,8 @@
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
+    "createOrganization": "I want to create an organization",
+    "organizationName": "Organization Name",
     "termsAccepted": "I accept the terms of service",
     "submit": "Sign Up",
     "errorFailed": "Registration failed.",
@@ -107,6 +109,7 @@
     "title": "Admin Panel",
     "tab": {
       "user": "User",
+      "organizations": "Organizations",
       "roleFunctions": "Role-Function"
     },
     "roleFunctions": {
@@ -120,8 +123,18 @@
         "description": "Description",
         "accessLevel": "Access",
         "uiPolicy": "Default Behavior",
-        "userCount": "User Count"
+        "userCount": "User Count",
+        "scope": "Admin Panel Access"
       },
+      "scope": {
+        "NONE": "None",
+        "ORGANIZATION": "Organization",
+        "PLATFORM": "Platform"
+      },
+      "confirmPlatformScope": "Grant platform-wide admin access to this role?",
+      "confirmPlatformScopeDetail": "Every holder of this role will be able to see and manage every organization, not just their own.",
+      "scopeUpdated": "Admin panel access updated.",
+      "scopeUpdateError": "Failed to update admin panel access.",
       "stats": {
         "totalRoles": "Total Roles",
         "assignedRoles": "Assigned Roles",
@@ -196,6 +209,42 @@
         "DISABLE_IF_DENIED": "Visible, not clickable by default"
       }
     },
+    "organizations": {
+      "title": "Organizations",
+      "hint": "An organization admin only sees and manages their own organization(s) - never another organization's users or data.",
+      "search": "Search organizations...",
+      "column": {
+        "name": "Organization",
+        "description": "Description",
+        "memberCount": "Members"
+      },
+      "updated": "Organization updated.",
+      "updateError": "Failed to update organization.",
+      "deleted": "Organization deleted.",
+      "deleteError": "Failed to delete organization.",
+      "confirmDelete": "Delete this organization? Its members simply lose membership - they are never deleted.",
+      "error": "Failed to update organization membership.",
+      "newOrganization": {
+        "title": "Create a new organization",
+        "placeholder": "Organization name",
+        "button": "Add Organization",
+        "success": "Organization created.",
+        "error": "Failed to create organization."
+      },
+      "addMember": {
+        "button": "Add Member",
+        "title": "Add a member",
+        "placeholder": "Exact username or email",
+        "searchButton": "Search",
+        "notFound": "No user matches that username or email.",
+        "alreadyMember": "Already a member",
+        "confirmButton": "Add to organization"
+      },
+      "memberAdded": "Member added.",
+      "memberRemoved": "Member removed.",
+      "confirmRemoveMember": "Remove this member from the organization?",
+      "removeMemberAction": "Remove"
+    },
     "registrationsTitle": "User Registrations",
     "registrationsTotalFor": "Total registrations in the last {{period}}",
     "registrationsTrendTitle": "Registration Trend",
@@ -268,6 +317,7 @@
       },
       "selfRoleHint": "You cannot remove your own ADMIN role.",
       "roleDisabledLabel": "{{role}} (disabled)",
+      "rolePlatformOnlyLabel": "{{role}} (platform admin only)",
       "success": "User updated.",
       "error": "Failed to update user."
     },

@@ -2,7 +2,9 @@ package com.platform.security.integration.keycloak;
 
 import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
+import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.security.integration.keycloak.model.KeycloakUser;
+import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.security.integration.keycloak.model.RealmRole;
 import com.platform.security.integration.keycloak.model.ResetPasswordRequest;
@@ -85,4 +87,37 @@ public interface KeycloakAdminClient {
     /** The realm's most recent admin events overall, not filtered to any one user - backs the
      * admin panel's "Recent Activity" feed. Newest first, capped to limit. */
     List<AdminEvent> getRecentAdminEvents(int limit);
+
+    /** Top-level Keycloak Groups - the source of truth for "organizations" (see
+     * [[feedback_keycloak_source_of_truth]]-style project convention: never a parallel local
+     * table). One group = one organization; no nested sub-groups in this app. */
+    List<KeycloakGroup> listGroups();
+
+    /** Creates a new organization. Rejects a duplicate name the same way createUser rejects a
+     * duplicate username (HTTP 409 from Keycloak). */
+    KeycloakGroup createGroup(String name);
+
+    /** The only group field this app ever edits - stored as a Keycloak group attribute (Groups
+     * have no native description field the way Roles do). */
+    void updateGroupDescription(String groupId, String description);
+
+    /** Deletes the organization entirely. Member users are simply no longer members of anything -
+     * they are never deleted or otherwise touched. */
+    void deleteGroup(String groupId);
+
+    /** Every user in this organization - same minimal id-only shape as getUserIdsWithRole,
+     * cross-referenced against listUsers()/getUser() by the caller for display fields. */
+    List<KeycloakUserId> getGroupMembers(String groupId);
+
+    /** Every organization this user belongs to - a user may belong to more than one. Used both
+     * to resolve "which organization(s) does this admin themselves manage" and to show a user's
+     * own organization membership in the admin panel. */
+    List<KeycloakGroup> getUserGroups(String keycloakUserId);
+
+    /** Adds a user to an organization. Idempotent in Keycloak - adding an existing member again
+     * is a no-op, not an error. */
+    void addUserToGroup(String keycloakUserId, String groupId);
+
+    /** Removes a user from an organization - the counterpart to addUserToGroup. */
+    void removeUserFromGroup(String keycloakUserId, String groupId);
 }
