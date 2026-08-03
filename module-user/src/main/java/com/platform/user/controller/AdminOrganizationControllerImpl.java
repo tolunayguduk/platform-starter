@@ -74,8 +74,8 @@ public class AdminOrganizationControllerImpl implements AdminOrganizationControl
     }
 
     @Override
-    public AdminUserDto findUserByIdentifier(String identifier, Jwt jwt) {
-        return adminUserMapper.toDto(adminOrganizationService.findUserByIdentifier(identifier, jwt.getSubject()));
+    public AdminUserDto findUserByIdentifier(String identifier) {
+        return adminUserMapper.toDto(adminOrganizationService.findUserByIdentifier(identifier));
     }
 
     @Override

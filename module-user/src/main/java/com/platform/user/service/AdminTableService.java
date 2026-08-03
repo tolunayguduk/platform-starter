@@ -18,7 +18,10 @@ public interface AdminTableService {
 
     List<AdminTableSummaryResult> listTables();
 
-    AdminTableRowsResult getRows(AdminTableKey key);
+    /** PERMISSION/ROLE_PERMISSION/USER_CONSENT rows are never shown to an organization-scope
+     * caller at all (PLATFORM-scope only); USER_PROFILE/USER_CONTACT rows are shown but filtered
+     * down to the caller's own organization's members - see AdminAccessScopeService.resolveVisibleUserIds. */
+    AdminTableRowsResult getRows(AdminTableKey key, String callerKeycloakUserId);
 
     /** PLATFORM-scope only - a manager manages their organization's users/membership, but never
      * gets to see the change history behind it (audit trails on GDPR/role-grant tables alike). */

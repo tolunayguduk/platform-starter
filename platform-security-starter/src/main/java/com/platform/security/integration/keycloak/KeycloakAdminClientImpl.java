@@ -231,6 +231,23 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @Override
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
+    public List<String> getUserRoleNames(String keycloakUserId) {
+        List<RealmRole> roles = restClient.get().uri("/users/{id}/role-mappings/realm", keycloakUserId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<RealmRole>>() {
+                });
+        if (roles == null) {
+            return List.of();
+        }
+        return roles.stream()
+                .map(RealmRole::name)
+                .filter(KeycloakRoleMapper::isApplicationRole)
+                .toList();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
     public List<String> getUserIdsWithRole(String roleName) {
         List<KeycloakUserId> users = restClient.get().uri("/roles/{roleName}/users", roleName)
                 .retrieve()
@@ -421,7 +438,7 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public void updateGroupDescription(String groupId, String description) {
-        mergeGroupAttribute(groupId, "description", description == null ? "" : description);
+        mergeGroupAttributes(groupId, Map.of("description", description == null ? "" : description));
     }
 
     @Override
@@ -457,28 +474,25 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @Override
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
-    public void updateGroupCoverImage(String groupId, String coverImageUrl) {
-        mergeGroupAttribute(groupId, "coverImageUrl", coverImageUrl == null ? "" : coverImageUrl);
-    }
-
-    @Override
-    @CircuitBreaker(name = CB_NAME)
-    @Retry(name = CB_NAME)
-    public void updateGroupLogoImage(String groupId, String logoImageUrl) {
-        mergeGroupAttribute(groupId, "logoImageUrl", logoImageUrl == null ? "" : logoImageUrl);
+    public void updateGroupImages(String groupId, String coverImageUrl, String logoImageUrl) {
+        mergeGroupAttributes(groupId, Map.of(
+                "coverImageUrl", coverImageUrl == null ? "" : coverImageUrl,
+                "logoImageUrl", logoImageUrl == null ? "" : logoImageUrl));
     }
 
     @Override
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public void updateGroupMembershipApproval(String groupId, boolean requiresApproval) {
-        mergeGroupAttribute(groupId, "requiresApproval", String.valueOf(requiresApproval));
+        mergeGroupAttributes(groupId, Map.of("requiresApproval", String.valueOf(requiresApproval)));
     }
 
-    /** PUT /groups/{id} replaces the whole representation, attributes included - so setting one
-     * attribute has to read the current full set first and only replace that one key, or every
-     * other attribute (e.g. description vs. requiresApproval) would get silently wiped. */
-    private void mergeGroupAttribute(String groupId, String key, String value) {
+    /** PUT /groups/{id} replaces the whole representation, attributes included - so setting any
+     * attribute(s) has to read the current full set first and only replace those keys, or every
+     * other attribute would get silently wiped. Takes a map so a caller needing to set several
+     * attributes at once (e.g. cover + logo) does it in a single round trip, not one GET+PUT per
+     * attribute. */
+    private void mergeGroupAttributes(String groupId, Map<String, String> updates) {
         KeycloakGroupRepresentation current = restClient.get().uri("/groups/{id}", groupId)
                 .retrieve()
                 .body(KeycloakGroupRepresentation.class);
@@ -486,7 +500,7 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
             throw new TechnicalException("AUTHZ-4012", "Keycloak group not found: " + groupId);
         }
         Map<String, List<String>> attributes = new HashMap<>(current.attributes() != null ? current.attributes() : Map.of());
-        attributes.put(key, List.of(value));
+        updates.forEach((key, value) -> attributes.put(key, List.of(value)));
         Map<String, Object> body = Map.of("name", current.name(), "attributes", attributes);
         restClient.put().uri("/groups/{id}", groupId)
                 .body(body)

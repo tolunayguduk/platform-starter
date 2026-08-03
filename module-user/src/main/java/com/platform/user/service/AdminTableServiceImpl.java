@@ -15,6 +15,7 @@ import com.platform.user.repository.RoleStateRepository;
 import com.platform.user.repository.UserConsentRepository;
 import com.platform.user.repository.UserContactRepository;
 import com.platform.user.repository.UserProfileRepository;
+import com.platform.user.service.model.AdminAccessScope;
 import com.platform.user.service.model.AdminAuditRowsResult;
 import com.platform.user.service.model.AdminTableRowsResult;
 import com.platform.user.service.model.AdminTableSummaryResult;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -116,13 +118,22 @@ public class AdminTableServiceImpl implements AdminTableService {
      * USER_PROFILE (name, birth date, avatar, locale) is a user's own identity/profile info - an
      * organization admin manages membership and roles, never edits this on someone else's behalf;
      * only the user themselves (self-service) or a platform-scope admin can. */
-    private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_KEYS =
+    private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_WRITE_KEYS =
             Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION, AdminTableKey.USER_PROFILE);
 
+    /** PERMISSION/ROLE_PERMISSION aren't user data at all - platform-wide role/function
+     * definitions, same reasoning as the write restriction above. USER_CONSENT is sensitive GDPR
+     * consent history - the "Onaylar" tab is already hidden client-side for an organization-scope
+     * caller (see DatabaseTablesBrowser.tsx); this is that same rule enforced server-side, since a
+     * hidden tab alone doesn't stop a direct API call. Neither of these is filtered down to the
+     * caller's own organization like USER_PROFILE/USER_CONTACT reads are below - they're not
+     * shown at all. */
+    private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_READ_KEYS =
+            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION, AdminTableKey.USER_CONSENT);
+
     private void requirePlatformScopeIfRestricted(AdminTableKey key, String callerKeycloakUserId) {
-        if (PLATFORM_SCOPE_ONLY_KEYS.contains(key) && !adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
-            throw new BusinessException("ADMIN-4008", "error.admin.platform_scope_required",
-                    "Only a platform-scope admin can modify " + key);
+        if (PLATFORM_SCOPE_ONLY_WRITE_KEYS.contains(key)) {
+            adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         }
     }
 
@@ -134,12 +145,43 @@ public class AdminTableServiceImpl implements AdminTableService {
     }
 
     @Override
-    public AdminTableRowsResult getRows(AdminTableKey key) {
+    public AdminTableRowsResult getRows(AdminTableKey key, String callerKeycloakUserId) {
         TableMeta meta = REGISTRY.get(key);
-        String sql = "SELECT " + quotedColumns(meta.columns()) + " FROM " + quote(meta.tableName())
-                + " LIMIT " + MAIN_TABLE_ROW_LIMIT;
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+        if (PLATFORM_SCOPE_ONLY_READ_KEYS.contains(key)) {
+            adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
+            return fetchRows(meta, null);
+        }
+
+        AdminAccessScope callerScope = adminAccessScopeService.resolve(callerKeycloakUserId);
+        // Every remaining table here (USER_PROFILE, USER_CONTACT) is keyed by keycloak_user_id -
+        // an organization-scope caller only ever sees rows for their own organization's members,
+        // never the whole platform's, even though the table is browsable at all for them.
+        Set<String> restrictToUserIds = callerScope.platformScoped()
+                ? null
+                : adminAccessScopeService.resolveVisibleUserIds(callerScope);
+        return fetchRows(meta, restrictToUserIds);
+    }
+
+    private AdminTableRowsResult fetchRows(TableMeta meta, Set<String> restrictToUserIds) {
+        if (restrictToUserIds != null && restrictToUserIds.isEmpty()) {
+            return new AdminTableRowsResult(meta.columns(), meta.primaryKeyColumn(), List.of());
+        }
+        List<Map<String, Object>> rows;
+        if (restrictToUserIds == null) {
+            String sql = "SELECT " + quotedColumns(meta.columns()) + " FROM " + quote(meta.tableName())
+                    + " LIMIT " + MAIN_TABLE_ROW_LIMIT;
+            rows = jdbcTemplate.queryForList(sql);
+        } else {
+            String sql = "SELECT " + quotedColumns(meta.columns()) + " FROM " + quote(meta.tableName())
+                    + " WHERE `keycloak_user_id` IN (" + placeholders(restrictToUserIds.size()) + ")"
+                    + " LIMIT " + MAIN_TABLE_ROW_LIMIT;
+            rows = jdbcTemplate.queryForList(sql, restrictToUserIds.toArray());
+        }
         return new AdminTableRowsResult(meta.columns(), meta.primaryKeyColumn(), rows);
+    }
+
+    private String placeholders(int count) {
+        return String.join(",", Collections.nCopies(count, "?"));
     }
 
     @Override

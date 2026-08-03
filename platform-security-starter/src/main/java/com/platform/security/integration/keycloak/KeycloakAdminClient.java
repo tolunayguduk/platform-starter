@@ -56,6 +56,11 @@ public interface KeycloakAdminClient {
     /** All user ids currently holding a given realm role. */
     List<String> getUserIdsWithRole(String roleName);
 
+    /** This user's own realm role names, resolved in a single call - the efficient counterpart to
+     * checking getUserIdsWithRole once per realm role (which costs one Keycloak round trip per
+     * role just to answer "which roles does this one user hold"). */
+    List<String> getUserRoleNames(String keycloakUserId);
+
     /** Every user in the realm - identity plus Keycloak's own bookkeeping fields (enabled,
      * createdTimestamp). There is no local user table left to query. */
     List<KeycloakUserSummary> listUsers();
@@ -108,12 +113,10 @@ public interface KeycloakAdminClient {
     /** Renames the organization - rejects a duplicate name the same way createGroup does. */
     void renameGroup(String groupId, String newName);
 
-    /** Landing-page cover photo, stored as a group attribute (a URL, same convention as a user's
-     * own profile avatarUrl - no file storage in this app, just a link). */
-    void updateGroupCoverImage(String groupId, String coverImageUrl);
-
-    /** Landing-page profile photo/logo, same URL-attribute convention as updateGroupCoverImage. */
-    void updateGroupLogoImage(String groupId, String logoImageUrl);
+    /** Landing-page cover photo and profile photo/logo, stored as group attributes (URLs, same
+     * convention as a user's own profile avatarUrl - no file storage in this app, just a link).
+     * Set together in one call since the landing page's edit form always submits both at once. */
+    void updateGroupImages(String groupId, String coverImageUrl, String logoImageUrl);
 
     /** Whether a user self-requesting to join this organization needs a manager's approval, or
      * becomes a member immediately - see MembershipRequestType.JOIN_REQUEST. */

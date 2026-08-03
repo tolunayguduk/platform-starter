@@ -4,7 +4,6 @@ import com.platform.error.BusinessException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.model.AdminEvent;
 import com.platform.security.integration.keycloak.model.KeycloakGroup;
-import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.security.integration.keycloak.model.RealmRole;
 import com.platform.user.constant.MembershipRequestStatus;
@@ -89,7 +88,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         List<KeycloakUserSummary> users = keycloakAdminClient.listUsers();
         if (!callerScope.platformScoped()) {
-            Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
+            Set<String> visibleUserIds = adminAccessScopeService.resolveVisibleUserIds(callerScope);
             users = users.stream().filter(u -> visibleUserIds.contains(u.id())).toList();
         }
 
@@ -123,7 +122,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void updateRoleStatus(String roleName, boolean enabled, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         if (!enabled) {
             assertNotLastEnabledPlatformRole(roleName);
         }
@@ -135,7 +134,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void updateRoleScope(String roleName, RoleScope scope, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         RoleState state = loadOrNewRoleState(roleName);
         state.setScope(scope);
         roleStateRepository.save(state);
@@ -143,7 +142,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void createRole(String roleName, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         if (isBlank(roleName)) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Role name required");
         }
@@ -152,14 +151,14 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void updateRoleDescription(String roleName, String description, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         keycloakAdminClient.updateRealmRoleDescription(roleName, description);
     }
 
     @Override
     @Transactional
     public void deleteRole(String roleName, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         assertNotLastEnabledPlatformRole(roleName);
         keycloakAdminClient.deleteRealmRole(roleName);
         // Keycloak is the source of truth for the role itself, but role_permission is our own
@@ -257,7 +256,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void updateUserIdentity(UpdateUserIdentityCommand command) {
-        requirePlatformScope(command.callerKeycloakUserId());
+        adminAccessScopeService.requirePlatformScope(command.callerKeycloakUserId());
         if (isBlank(command.username()) || isBlank(command.email())) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Required field missing");
         }
@@ -279,7 +278,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         List<AdminEvent> events = keycloakAdminClient.getUserAdminEvents(keycloakUserId);
         return events.stream()
                 .map(e -> new AdminUserAuditEventResult(
@@ -295,7 +294,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         // noise could crowd out older-but-still-relevant events before the org filter ever saw them.
         List<AdminEvent> events = keycloakAdminClient.getRecentAdminEvents(RECENT_ACTIVITY_SCAN_WINDOW);
         if (!callerScope.platformScoped()) {
-            Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
+            Set<String> visibleUserIds = adminAccessScopeService.resolveVisibleUserIds(callerScope);
             events = events.stream()
                     .filter(e -> e.resourcePath() != null
                             && visibleUserIds.stream().anyMatch(id -> e.resourcePath().startsWith("users/" + id)))
@@ -337,7 +336,7 @@ public class AdminUserServiceImpl implements AdminUserService {
      * organization's creator (added as its first member directly, never through a request) and any
      * membership granted outside the invite/join-request flow (e.g. by direct admin action). */
     private List<Instant> resolveOrganizationJoinTimestamps(AdminAccessScope callerScope, List<KeycloakUserSummary> allUsers) {
-        Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
+        Set<String> visibleUserIds = adminAccessScopeService.resolveVisibleUserIds(callerScope);
         Map<String, Instant> accountCreatedAt = allUsers.stream()
                 .collect(Collectors.toMap(KeycloakUserSummary::id, u -> Instant.ofEpochMilli(u.createdTimestamp())));
 
@@ -373,22 +372,6 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new BusinessException("USER-4004", "error.admin.last_platform_role",
                     "Cannot remove/disable the last platform-scope role");
         }
-    }
-
-    private void requirePlatformScope(String callerKeycloakUserId) {
-        if (!adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
-            throw new BusinessException("USER-4006", "error.admin.platform_scope_required",
-                    "Only a platform-scope admin can perform this action");
-        }
-    }
-
-    /** The Keycloak user ids visible to an organization-scoped caller - members of every
-     * organization they belong to. Shared by listUsers, getRegistrationStats and
-     * getRecentActivity so the three stay consistent with each other. */
-    private Set<String> resolveVisibleUserIds(AdminAccessScope callerScope) {
-        return callerScope.organizationGroupIds().stream()
-                .flatMap(groupId -> keycloakAdminClient.getGroupMembers(groupId).stream().map(KeycloakUserId::id))
-                .collect(Collectors.toSet());
     }
 
     private void assertSharesOrganization(AdminAccessScope callerScope, String targetKeycloakUserId) {

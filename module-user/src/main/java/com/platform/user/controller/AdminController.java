@@ -116,8 +116,10 @@ public interface AdminController {
     @GetMapping("/tables")
     List<AdminTableDto> listTables();
 
+    /** PERMISSION/ROLE_PERMISSION/USER_CONSENT: PLATFORM-scope only. USER_PROFILE/USER_CONTACT:
+     * filtered to the caller's own organization's members for an ORGANIZATION-scope caller. */
     @GetMapping("/tables/{key}/rows")
-    AdminTableRowsDto getTableRows(@PathVariable AdminTableKey key);
+    AdminTableRowsDto getTableRows(@PathVariable AdminTableKey key, @AuthenticationPrincipal Jwt jwt);
 
     /** A single row's Envers audit history, keyed by that table's primary key value -
      * PLATFORM-scope only. */

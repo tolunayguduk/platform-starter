@@ -125,8 +125,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public AdminTableRowsDto getTableRows(AdminTableKey key) {
-        return adminTableMapper.toDto(adminTableService.getRows(key));
+    public AdminTableRowsDto getTableRows(AdminTableKey key, Jwt jwt) {
+        return adminTableMapper.toDto(adminTableService.getRows(key, jwt.getSubject()));
     }
 
     @Override

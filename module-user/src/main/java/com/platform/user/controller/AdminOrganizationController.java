@@ -70,7 +70,7 @@ public interface AdminOrganizationController {
     /** Exact username/email lookup only, never a browse/search - backs the invite flow so an
      * organization admin can find someone without seeing the full user directory. */
     @GetMapping("/user-lookup")
-    AdminUserDto findUserByIdentifier(@RequestParam String identifier, @AuthenticationPrincipal Jwt jwt);
+    AdminUserDto findUserByIdentifier(@RequestParam String identifier);
 
     /** Creates a pending invite - does NOT grant membership. The target user must accept it
      * themselves (see /api/me/organization-invites). PLATFORM: any organization.

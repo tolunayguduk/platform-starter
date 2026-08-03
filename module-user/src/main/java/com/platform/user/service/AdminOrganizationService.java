@@ -44,8 +44,10 @@ public interface AdminOrganizationService {
 
     /** Exact username/email match only, never a browse/search - lets an organization admin invite
      * a specific known person without exposing the full user directory to them (that would defeat
-     * the whole point of isolating organizations from each other). */
-    AdminUserResult findUserByIdentifier(String usernameOrEmail, String callerKeycloakUserId);
+     * the whole point of isolating organizations from each other). No caller id: intentionally not
+     * scoped to the caller's own organization(s) - a manager may need to find and invite someone
+     * from outside their organization, by design. */
+    AdminUserResult findUserByIdentifier(String usernameOrEmail);
 
     /** Creates a PENDING invite - does not grant membership. The target user must accept it
      * themselves (OrganizationMembershipService.acceptInvite). Rejects if already a member or an

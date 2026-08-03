@@ -64,7 +64,7 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
 
     @Override
     public OrganizationResult createOrganization(String name, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         if (name == null || name.isBlank()) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Organization name required");
         }
@@ -91,8 +91,7 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     @Override
     public void updateOrganizationImages(String organizationId, String coverImageUrl, String logoImageUrl, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
-        keycloakAdminClient.updateGroupCoverImage(organizationId, coverImageUrl);
-        keycloakAdminClient.updateGroupLogoImage(organizationId, logoImageUrl);
+        keycloakAdminClient.updateGroupImages(organizationId, coverImageUrl, logoImageUrl);
     }
 
     @Override
@@ -103,7 +102,7 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
 
     @Override
     public void deleteOrganization(String organizationId, String callerKeycloakUserId) {
-        requirePlatformScope(callerKeycloakUserId);
+        adminAccessScopeService.requirePlatformScope(callerKeycloakUserId);
         keycloakAdminClient.deleteGroup(organizationId);
     }
 
@@ -130,7 +129,7 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     }
 
     @Override
-    public AdminUserResult findUserByIdentifier(String usernameOrEmail, String callerKeycloakUserId) {
+    public AdminUserResult findUserByIdentifier(String usernameOrEmail) {
         if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Username or email required");
         }
@@ -286,13 +285,6 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
                 kcUser.enabled() ? "ACTIVE" : "DISABLED",
                 Instant.ofEpochMilli(kcUser.createdTimestamp()),
                 roles);
-    }
-
-    private void requirePlatformScope(String callerKeycloakUserId) {
-        if (!adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
-            throw new BusinessException("USER-4006", "error.admin.platform_scope_required",
-                    "Only a platform-scope admin can perform this action");
-        }
     }
 
     private void assertCanAccessOrganization(String callerKeycloakUserId, String organizationId) {

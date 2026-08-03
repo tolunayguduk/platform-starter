@@ -1,6 +1,8 @@
 package com.platform.user.service;
 
+import com.platform.error.BusinessException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
+import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.user.constant.RoleScope;
 import com.platform.user.entity.OrganizationManager;
 import com.platform.user.entity.RoleState;
@@ -53,9 +55,27 @@ public class AdminAccessScopeServiceImpl implements AdminAccessScopeService {
     }
 
     @Override
+    public void requirePlatformScope(String callerKeycloakUserId) {
+        if (!resolve(callerKeycloakUserId).platformScoped()) {
+            throw new BusinessException("USER-4006", "error.admin.platform_scope_required",
+                    "Only a platform-scope admin can perform this action");
+        }
+    }
+
+    @Override
     public Set<String> resolveUserRoles(String keycloakUserId, List<String> managedRoles) {
-        return managedRoles.stream()
-                .filter(role -> keycloakAdminClient.getUserIdsWithRole(role).contains(keycloakUserId))
+        // A single "which roles does this one user hold" call, intersected with managedRoles -
+        // not one Keycloak round trip per realm role to ask "who holds role X" and check membership.
+        Set<String> managedRoleSet = Set.copyOf(managedRoles);
+        return keycloakAdminClient.getUserRoleNames(keycloakUserId).stream()
+                .filter(managedRoleSet::contains)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<String> resolveVisibleUserIds(AdminAccessScope callerScope) {
+        return callerScope.organizationGroupIds().stream()
+                .flatMap(groupId -> keycloakAdminClient.getGroupMembers(groupId).stream().map(KeycloakUserId::id))
                 .collect(Collectors.toSet());
     }
 }
