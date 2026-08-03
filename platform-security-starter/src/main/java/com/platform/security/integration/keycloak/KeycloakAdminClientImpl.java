@@ -123,7 +123,12 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public KeycloakUser getUser(String keycloakUserId) {
-        return restClient.get().uri("/users/{id}", keycloakUserId).retrieve().body(KeycloakUser.class);
+        return restClient.get().uri("/users/{id}", keycloakUserId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new BusinessException("ADMIN-4041", "error.admin.user_not_found", "No such user: " + keycloakUserId);
+                })
+                .body(KeycloakUser.class);
     }
 
     @Override

@@ -426,5 +426,12 @@
   "myOrganizations": {
     "hint": "Şu anda üye olduğunuz organizasyonlar. Sayfasını açmak için birine tıklayın.",
     "empty": "Henüz herhangi bir organizasyona üye değilsiniz - navbar'daki arama kutusunu kullanarak bulabilirsiniz."
+  },
+  "userProfile": {
+    "editInSettings": "Ayarlardan Düzenle",
+    "organizations": "Organizasyonlar",
+    "noOrganizations": "Henüz herhangi bir organizasyona üye değil.",
+    "notFoundTitle": "Kullanıcı bulunamadı",
+    "notFoundSubtitle": "Bu kullanıcı mevcut değil veya link hatalı."
   }
 }

@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
 import { OrganizationLandingPage } from './pages/organizations/OrganizationLandingPage';
+import { UserProfilePage } from './pages/users/UserProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/organizations/:id" element={<OrganizationLandingPage />} />
+        <Route path="/users/:id" element={<UserProfilePage />} />
         <Route
           path="/admin"
           element={

@@ -426,5 +426,12 @@
   "myOrganizations": {
     "hint": "Organizations you're currently a member of. Click one to open its page.",
     "empty": "You're not a member of any organization yet - search for one using the navbar."
+  },
+  "userProfile": {
+    "editInSettings": "Edit in Settings",
+    "organizations": "Organizations",
+    "noOrganizations": "Not a member of any organization yet.",
+    "notFoundTitle": "User not found",
+    "notFoundSubtitle": "This user doesn't exist, or the link is incorrect."
   }
 }

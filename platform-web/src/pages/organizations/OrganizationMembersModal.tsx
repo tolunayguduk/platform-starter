@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Avatar, List, Modal } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { fetchOrganizationMembers } from '../../api/organizationDirectoryApi';
 import type { OrganizationMemberSummary } from '../../types/organization';
@@ -35,11 +36,13 @@ export function OrganizationMembersModal({
         dataSource={members}
         renderItem={(member) => (
           <List.Item>
-            <List.Item.Meta
-              avatar={<Avatar icon={<UserOutlined />} />}
-              title={member.fullName || member.username}
-              description={member.fullName ? member.username : undefined}
-            />
+            <Link to={`/users/${member.keycloakUserId}`} onClick={onClose} style={{ width: '100%' }}>
+              <List.Item.Meta
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={member.fullName || member.username}
+                description={member.fullName ? member.username : undefined}
+              />
+            </Link>
           </List.Item>
         )}
       />
