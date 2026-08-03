@@ -7,6 +7,7 @@ import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.user.constant.MembershipRequestStatus;
 import com.platform.user.constant.MembershipRequestType;
 import com.platform.user.entity.OrganizationMembershipRequest;
+import com.platform.user.repository.OrganizationManagerRepository;
 import com.platform.user.repository.OrganizationMembershipRequestRepository;
 import com.platform.user.service.model.OrganizationMembershipRequestResult;
 import com.platform.user.service.model.OrganizationSearchResult;
@@ -24,11 +25,14 @@ public class OrganizationMembershipServiceImpl implements OrganizationMembership
 
     private final KeycloakAdminClient keycloakAdminClient;
     private final OrganizationMembershipRequestRepository membershipRequestRepository;
+    private final OrganizationManagerRepository organizationManagerRepository;
 
     public OrganizationMembershipServiceImpl(KeycloakAdminClient keycloakAdminClient,
-                                              OrganizationMembershipRequestRepository membershipRequestRepository) {
+                                              OrganizationMembershipRequestRepository membershipRequestRepository,
+                                              OrganizationManagerRepository organizationManagerRepository) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.membershipRequestRepository = membershipRequestRepository;
+        this.organizationManagerRepository = organizationManagerRepository;
     }
 
     @Override
@@ -103,6 +107,7 @@ public class OrganizationMembershipServiceImpl implements OrganizationMembership
     }
 
     @Override
+    @Transactional
     public void leaveOrganization(String organizationId, String keycloakUserId) {
         keycloakAdminClient.getGroup(organizationId); // throws a clean 404 if the id is garbage
         Set<String> memberIds = keycloakAdminClient.getGroupMembers(organizationId).stream()
@@ -112,6 +117,10 @@ public class OrganizationMembershipServiceImpl implements OrganizationMembership
             throw new BusinessException("USER-4009", "error.admin.not_a_member", "Not a member of this organization");
         }
         keycloakAdminClient.removeUserFromGroup(keycloakUserId, organizationId);
+        // No last-manager protection here (unlike AdminOrganizationService.removeOrganizationManager) -
+        // a manager can always leave their own org; PLATFORM scope can reassign a manager afterward
+        // if that orphans it.
+        organizationManagerRepository.deleteByOrganizationIdAndKeycloakUserId(organizationId, keycloakUserId);
     }
 
     @Override

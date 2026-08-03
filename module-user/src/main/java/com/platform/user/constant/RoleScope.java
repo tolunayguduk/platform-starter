@@ -1,19 +1,20 @@
 package com.platform.user.constant;
 
 /**
- * Whether - and how far - a role's authority reaches into the admin panel at all. Purely local
- * policy, not Keycloak-owned data (same category as RoleState.enabled).
+ * Whether a role's authority reaches into the admin panel platform-wide. Purely local policy, not
+ * Keycloak-owned data (same category as RoleState.enabled).
  *
  * <ul>
- *   <li>{@code NONE} (default): not an admin-panel role at all - e.g. a plain "USER" role never
- *   gets admin-panel access just by existing. This is what makes the other two values opt-in.</li>
- *   <li>{@code ORGANIZATION}: admin-panel access, confined to whatever organization(s) the holder
- *   is personally a member of (see AdminAccessScopeService).</li>
- *   <li>{@code PLATFORM}: admin-panel access, unrestricted.</li>
+ *   <li>{@code NONE} (default): not a platform-wide admin role - e.g. a plain "USER" role never
+ *   gets platform-wide admin access just by existing. This is what makes PLATFORM opt-in.</li>
+ *   <li>{@code PLATFORM}: unrestricted admin-panel access to everything.</li>
  * </ul>
+ *
+ * <p>Organization-level admin authority is <em>not</em> a role concept at all - see
+ * {@code OrganizationManager}/{@code AdminAccessScopeService}: it's granted per organization,
+ * independent of any role, to whoever is explicitly listed as that organization's manager.
  */
 public enum RoleScope {
     NONE,
-    ORGANIZATION,
     PLATFORM
 }

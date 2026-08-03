@@ -140,7 +140,6 @@
       },
       "scope": {
         "NONE": "None",
-        "ORGANIZATION": "Organization",
         "PLATFORM": "Platform"
       },
       "confirmPlatformScope": "Grant platform-wide admin access to this role?",
@@ -260,6 +259,11 @@
       "inviteSent": "Invite sent - pending the user's acceptance.",
       "memberRemoved": "Member removed.",
       "confirmRemoveMember": "Remove this member from the organization?",
+      "managerTag": "Manager",
+      "makeManagerAction": "Make Manager",
+      "removeManagerAction": "Remove as Manager",
+      "managerAdded": "Manager added.",
+      "managerRemoved": "Manager removed.",
       "removeMemberAction": "Remove",
       "pendingRequests": {
         "empty": "No pending join requests.",

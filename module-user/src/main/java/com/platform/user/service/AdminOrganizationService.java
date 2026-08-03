@@ -52,8 +52,23 @@ public interface AdminOrganizationService {
      * identical pending invite already exists. */
     void inviteMember(String organizationId, String keycloakUserId, String callerKeycloakUserId);
 
-    /** Removing a member is unilateral - no consent needed, unlike adding one. */
+    /** Removing a member is unilateral - no consent needed, unlike adding one. Also strips their
+     * manager status for this organization, if they had any - a former member can't stay listed
+     * as its manager. */
     void removeMember(String organizationId, String keycloakUserId, String callerKeycloakUserId);
+
+    /** Every current manager of this organization - PLATFORM: any organization. ORGANIZATION-scope:
+     * only their own. */
+    List<AdminUserResult> listOrganizationManagers(String organizationId, String callerKeycloakUserId);
+
+    /** Promotes an existing member to manager - PLATFORM-scope, or an existing manager of this
+     * same organization (co-management). Rejects if the target isn't already a member, or is
+     * already a manager. */
+    void addOrganizationManager(String organizationId, String targetKeycloakUserId, String callerKeycloakUserId);
+
+    /** Demotes a manager - same caller guard as addOrganizationManager. Rejects removing an
+     * organization's last manager (ADMIN can still always reassign one via PLATFORM scope). */
+    void removeOrganizationManager(String organizationId, String targetKeycloakUserId, String callerKeycloakUserId);
 
     /** Pending self-service join requests (not invites) targeting this organization. */
     List<OrganizationMembershipRequestResult> listPendingJoinRequests(String organizationId, String callerKeycloakUserId);

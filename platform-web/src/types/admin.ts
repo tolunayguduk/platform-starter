@@ -8,10 +8,11 @@ export interface AdminUser {
   roles: string[];
 }
 
-/** How far a role's authority reaches into the admin panel. NONE = not an admin-panel role at
- * all (the default for every newly created role); ORGANIZATION = confined to the holder's own
- * organization(s); PLATFORM = unrestricted. */
-export type RoleScope = 'NONE' | 'ORGANIZATION' | 'PLATFORM';
+/** Whether a role's authority reaches into the admin panel platform-wide. NONE = not a
+ * platform-wide admin role (the default for every newly created role); PLATFORM = unrestricted.
+ * Organization-level admin authority isn't a role concept at all - see the Members tab's
+ * per-organization manager list instead. */
+export type RoleScope = 'NONE' | 'PLATFORM';
 
 export interface AdminRole {
   name: string;

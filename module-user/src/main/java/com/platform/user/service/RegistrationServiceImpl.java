@@ -5,14 +5,15 @@ import com.platform.error.TechnicalException;
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.model.CreateKeycloakUserRequest;
 import com.platform.security.integration.keycloak.model.KeycloakGroup;
+import com.platform.user.entity.OrganizationManager;
 import com.platform.user.entity.UserConsent;
 import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.OrganizationManagerRepository;
 import com.platform.user.repository.UserConsentRepository;
 import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.RegisterUserCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,18 +33,18 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final UserProfileRepository userProfileRepository;
     private final UserConsentRepository userConsentRepository;
     private final OrganizationMembershipService organizationMembershipService;
-    private final String organizationAdminRole;
+    private final OrganizationManagerRepository organizationManagerRepository;
 
     public RegistrationServiceImpl(KeycloakAdminClient keycloakAdminClient,
                                     UserProfileRepository userProfileRepository,
                                     UserConsentRepository userConsentRepository,
                                     OrganizationMembershipService organizationMembershipService,
-                                    @Value("${platform.registration.organization-admin-role:MANAGER}") String organizationAdminRole) {
+                                    OrganizationManagerRepository organizationManagerRepository) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.userProfileRepository = userProfileRepository;
         this.userConsentRepository = userConsentRepository;
         this.organizationMembershipService = organizationMembershipService;
-        this.organizationAdminRole = organizationAdminRole;
+        this.organizationManagerRepository = organizationManagerRepository;
     }
 
     @Override
@@ -70,27 +71,28 @@ public class RegistrationServiceImpl implements RegistrationService {
         boolean joiningOrganization = joinOrganizationId != null && !joinOrganizationId.isEmpty();
         String createdGroupId = null;
         try {
+            // Keycloak's realm_access.roles JWT claim does NOT expand the "default-roles-<realm>"
+            // composite it auto-assigns on user creation - USER never actually appears in a token
+            // unless granted directly, so the permission matrix would never match it. Everyone gets
+            // it, including someone creating their own organization - organization-admin authority
+            // comes from organization_manager below, never from a role (see AdminAccessScopeService).
+            keycloakAdminClient.assignRealmRole(keycloakUserId, DEFAULT_ROLE);
             if (creatingOrganization) {
-                // Becomes the new organization's admin instead of a plain end user - which role
-                // that means is a deployment decision (platform.registration.organization-admin-role),
-                // never a name this class hardcodes. It must already be an ORGANIZATION-scoped role
-                // (see RoleScope) for the admin panel to actually let them in.
-                keycloakAdminClient.assignRealmRole(keycloakUserId, organizationAdminRole);
                 KeycloakGroup group = keycloakAdminClient.createGroup(organizationName);
                 createdGroupId = group.id();
                 keycloakAdminClient.addUserToGroup(keycloakUserId, createdGroupId);
-            } else {
-                // Keycloak's realm_access.roles JWT claim does NOT expand the "default-roles-<realm>"
-                // composite it auto-assigns on user creation - USER never actually appears in a
-                // token unless granted directly, so the permission matrix would never match it.
-                keycloakAdminClient.assignRealmRole(keycloakUserId, DEFAULT_ROLE);
-                if (joiningOrganization) {
-                    // Joining isn't creating - always a plain USER, and always goes through the
-                    // same pending/immediate approval logic a post-registration join would (see
-                    // OrganizationMembershipService.requestToJoin). A bad/nonexistent organization
-                    // id surfaces as a clean BusinessException, caught below like everything else.
-                    organizationMembershipService.requestToJoin(joinOrganizationId, keycloakUserId);
-                }
+
+                OrganizationManager manager = new OrganizationManager();
+                manager.setOrganizationId(createdGroupId);
+                manager.setKeycloakUserId(keycloakUserId);
+                manager.setGrantedByKeycloakUserId(keycloakUserId);
+                organizationManagerRepository.save(manager);
+            } else if (joiningOrganization) {
+                // Joining isn't creating - always a plain USER, and always goes through the same
+                // pending/immediate approval logic a post-registration join would (see
+                // OrganizationMembershipService.requestToJoin). A bad/nonexistent organization id
+                // surfaces as a clean BusinessException, caught below like everything else.
+                organizationMembershipService.requestToJoin(joinOrganizationId, keycloakUserId);
             }
 
             UserProfile profile = new UserProfile();

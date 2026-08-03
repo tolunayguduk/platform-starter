@@ -7,8 +7,10 @@ import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.user.constant.MembershipRequestStatus;
 import com.platform.user.constant.MembershipRequestType;
+import com.platform.user.entity.OrganizationManager;
 import com.platform.user.entity.OrganizationMembershipRequest;
 import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.OrganizationManagerRepository;
 import com.platform.user.repository.OrganizationMembershipRequestRepository;
 import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminAccessScope;
@@ -33,22 +35,27 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     private final UserProfileRepository userProfileRepository;
     private final AdminAccessScopeService adminAccessScopeService;
     private final OrganizationMembershipRequestRepository membershipRequestRepository;
+    private final OrganizationManagerRepository organizationManagerRepository;
 
     public AdminOrganizationServiceImpl(KeycloakAdminClient keycloakAdminClient, UserProfileRepository userProfileRepository,
                                          AdminAccessScopeService adminAccessScopeService,
-                                         OrganizationMembershipRequestRepository membershipRequestRepository) {
+                                         OrganizationMembershipRequestRepository membershipRequestRepository,
+                                         OrganizationManagerRepository organizationManagerRepository) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.userProfileRepository = userProfileRepository;
         this.adminAccessScopeService = adminAccessScopeService;
         this.membershipRequestRepository = membershipRequestRepository;
+        this.organizationManagerRepository = organizationManagerRepository;
     }
 
     @Override
     public List<OrganizationResult> listOrganizations(String callerKeycloakUserId) {
         AdminAccessScope scope = adminAccessScopeService.resolve(callerKeycloakUserId);
+        // Not every organization the caller happens to be a member of - only the ones they
+        // actually manage (scope.organizationGroupIds() is already exactly that set).
         List<KeycloakGroup> groups = scope.platformScoped()
                 ? keycloakAdminClient.listGroups()
-                : keycloakAdminClient.getUserGroups(callerKeycloakUserId);
+                : scope.organizationGroupIds().stream().map(keycloakAdminClient::getGroup).toList();
         return groups.stream()
                 .map(g -> new OrganizationResult(g.id(), g.name(), g.description(), g.coverImageUrl(), g.logoImageUrl(),
                         keycloakAdminClient.getGroupMembers(g.id()).size(), g.membershipRequiresApproval()))
@@ -163,9 +170,56 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     }
 
     @Override
+    @Transactional
     public void removeMember(String organizationId, String keycloakUserId, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
         keycloakAdminClient.removeUserFromGroup(keycloakUserId, organizationId);
+        organizationManagerRepository.deleteByOrganizationIdAndKeycloakUserId(organizationId, keycloakUserId);
+    }
+
+    @Override
+    public List<AdminUserResult> listOrganizationManagers(String organizationId, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        Set<String> managerIds = organizationManagerRepository.findByOrganizationId(organizationId).stream()
+                .map(OrganizationManager::getKeycloakUserId)
+                .collect(Collectors.toSet());
+        return keycloakAdminClient.listUsers().stream()
+                .filter(u -> managerIds.contains(u.id()))
+                .map(kcUser -> toResult(kcUser, Set.of()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void addOrganizationManager(String organizationId, String targetKeycloakUserId, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        Set<String> memberIds = keycloakAdminClient.getGroupMembers(organizationId).stream()
+                .map(KeycloakUserId::id)
+                .collect(Collectors.toSet());
+        if (!memberIds.contains(targetKeycloakUserId)) {
+            throw new BusinessException("ADMIN-4013", "error.admin.must_be_member_first",
+                    "User must already be a member of the organization before becoming its manager");
+        }
+        if (organizationManagerRepository.existsByOrganizationIdAndKeycloakUserId(organizationId, targetKeycloakUserId)) {
+            throw new BusinessException("ADMIN-4014", "error.admin.already_manager",
+                    "User is already a manager of this organization");
+        }
+        OrganizationManager manager = new OrganizationManager();
+        manager.setOrganizationId(organizationId);
+        manager.setKeycloakUserId(targetKeycloakUserId);
+        manager.setGrantedByKeycloakUserId(callerKeycloakUserId);
+        organizationManagerRepository.save(manager);
+    }
+
+    @Override
+    @Transactional
+    public void removeOrganizationManager(String organizationId, String targetKeycloakUserId, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        if (organizationManagerRepository.countByOrganizationId(organizationId) <= 1) {
+            throw new BusinessException("ADMIN-4015", "error.admin.last_manager",
+                    "Cannot remove the organization's last manager");
+        }
+        organizationManagerRepository.deleteByOrganizationIdAndKeycloakUserId(organizationId, targetKeycloakUserId);
     }
 
     @Override

@@ -140,7 +140,6 @@
       },
       "scope": {
         "NONE": "Yok",
-        "ORGANIZATION": "Organizasyon",
         "PLATFORM": "Platform"
       },
       "confirmPlatformScope": "Bu role platform genelinde admin yetkisi verilsin mi?",
@@ -260,6 +259,11 @@
       "inviteSent": "Davet gönderildi - kullanıcının onayı bekleniyor.",
       "memberRemoved": "Üye çıkarıldı.",
       "confirmRemoveMember": "Bu üye organizasyondan çıkarılsın mı?",
+      "managerTag": "Yönetici",
+      "makeManagerAction": "Yönetici Yap",
+      "removeManagerAction": "Yöneticilikten Çıkar",
+      "managerAdded": "Yönetici eklendi.",
+      "managerRemoved": "Yönetici çıkarıldı.",
       "removeMemberAction": "Çıkar",
       "pendingRequests": {
         "empty": "Bekleyen katılım talebi yok.",

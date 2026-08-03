@@ -92,4 +92,16 @@ public interface AdminOrganizationController {
 
     @PostMapping("/{id}/join-requests/{requestId}/reject")
     void rejectJoinRequest(@PathVariable String id, @PathVariable Long requestId, @AuthenticationPrincipal Jwt jwt);
+
+    /** PLATFORM: any organization. ORGANIZATION-scope: only their own. */
+    @GetMapping("/{id}/managers")
+    List<AdminUserDto> listOrganizationManagers(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
+
+    /** Promotes an existing member to manager - PLATFORM: any organization. ORGANIZATION-scope:
+     * only their own (co-management by an existing manager of the same organization). */
+    @PutMapping("/{id}/managers/{userId}")
+    void addOrganizationManager(@PathVariable String id, @PathVariable String userId, @AuthenticationPrincipal Jwt jwt);
+
+    @DeleteMapping("/{id}/managers/{userId}")
+    void removeOrganizationManager(@PathVariable String id, @PathVariable String userId, @AuthenticationPrincipal Jwt jwt);
 }

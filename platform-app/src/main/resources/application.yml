@@ -107,13 +107,6 @@ platform:
   web:
     # origins allowed to call this API with an Authorization header (platform-web dev server)
     allowed-origins: http://localhost:5173
-  registration:
-    # Role granted (instead of USER) when a self-registering user also creates an organization -
-    # config-driven, never hardcoded in RegistrationServiceImpl, same reasoning as role_state.scope
-    # itself: which role means "organization admin" is a deployment decision, not a fixed name.
-    # Must already be an ORGANIZATION-scoped role (set from the Role-Function Management tab) or
-    # the new organization admin won't be able to reach the admin panel.
-    organization-admin-role: MANAGER
 
 # --- resilience4j (guards every KeycloakAdminClient call, see its class-level javadoc) ---
 resilience4j:

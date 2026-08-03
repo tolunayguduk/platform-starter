@@ -100,6 +100,25 @@ export function fetchOrganizationMembers(accessToken: string, id: string): Promi
   return apiFetch<AdminUser[]>(`/api/admin/organizations/${encodeURIComponent(id)}/members`, { accessToken });
 }
 
+export function fetchOrganizationManagers(accessToken: string, id: string): Promise<AdminUser[]> {
+  return apiFetch<AdminUser[]>(`/api/admin/organizations/${encodeURIComponent(id)}/managers`, { accessToken });
+}
+
+/** Promotes an existing member to manager - target must already be a member. */
+export function addOrganizationManager(accessToken: string, organizationId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/managers/${encodeURIComponent(userId)}`, {
+    method: 'PUT',
+    accessToken,
+  });
+}
+
+export function removeOrganizationManager(accessToken: string, organizationId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/managers/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
 /** Exact username/email lookup only, never a browse/search - backs the "add member" flow. */
 export function findUserByIdentifier(accessToken: string, identifier: string): Promise<AdminUser> {
   return apiFetch<AdminUser>(`/api/admin/organizations/user-lookup?identifier=${encodeURIComponent(identifier)}`, { accessToken });

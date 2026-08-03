@@ -102,4 +102,19 @@ public class AdminOrganizationControllerImpl implements AdminOrganizationControl
     public void rejectJoinRequest(String id, Long requestId, Jwt jwt) {
         adminOrganizationService.rejectJoinRequest(requestId, jwt.getSubject());
     }
+
+    @Override
+    public List<AdminUserDto> listOrganizationManagers(String id, Jwt jwt) {
+        return adminUserMapper.toUserDtoList(adminOrganizationService.listOrganizationManagers(id, jwt.getSubject()));
+    }
+
+    @Override
+    public void addOrganizationManager(String id, String userId, Jwt jwt) {
+        adminOrganizationService.addOrganizationManager(id, userId, jwt.getSubject());
+    }
+
+    @Override
+    public void removeOrganizationManager(String id, String userId, Jwt jwt) {
+        adminOrganizationService.removeOrganizationManager(id, userId, jwt.getSubject());
+    }
 }

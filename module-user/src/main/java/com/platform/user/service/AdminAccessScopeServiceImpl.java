@@ -1,9 +1,10 @@
 package com.platform.user.service;
 
 import com.platform.security.integration.keycloak.KeycloakAdminClient;
-import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.user.constant.RoleScope;
+import com.platform.user.entity.OrganizationManager;
 import com.platform.user.entity.RoleState;
+import com.platform.user.repository.OrganizationManagerRepository;
 import com.platform.user.repository.RoleStateRepository;
 import com.platform.user.service.model.AdminAccessScope;
 import org.springframework.stereotype.Service;
@@ -17,10 +18,13 @@ public class AdminAccessScopeServiceImpl implements AdminAccessScopeService {
 
     private final KeycloakAdminClient keycloakAdminClient;
     private final RoleStateRepository roleStateRepository;
+    private final OrganizationManagerRepository organizationManagerRepository;
 
-    public AdminAccessScopeServiceImpl(KeycloakAdminClient keycloakAdminClient, RoleStateRepository roleStateRepository) {
+    public AdminAccessScopeServiceImpl(KeycloakAdminClient keycloakAdminClient, RoleStateRepository roleStateRepository,
+                                        OrganizationManagerRepository organizationManagerRepository) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.roleStateRepository = roleStateRepository;
+        this.organizationManagerRepository = organizationManagerRepository;
     }
 
     @Override
@@ -36,14 +40,15 @@ public class AdminAccessScopeServiceImpl implements AdminAccessScopeService {
             return new AdminAccessScope(true, false, Set.of());
         }
 
-        boolean organizationScoped = enabledScopes.contains(RoleScope.ORGANIZATION);
-        if (!organizationScoped) {
+        // Organization-admin authority has nothing to do with roles or mere group membership - it
+        // comes solely from being listed in organization_manager. A user who simply joins someone
+        // else's organization as an ordinary member must never inherit management rights over it.
+        Set<String> organizationGroupIds = organizationManagerRepository.findByKeycloakUserId(callerKeycloakUserId).stream()
+                .map(OrganizationManager::getOrganizationId)
+                .collect(Collectors.toSet());
+        if (organizationGroupIds.isEmpty()) {
             return new AdminAccessScope(false, false, Set.of());
         }
-
-        Set<String> organizationGroupIds = keycloakAdminClient.getUserGroups(callerKeycloakUserId).stream()
-                .map(KeycloakGroup::id)
-                .collect(Collectors.toSet());
         return new AdminAccessScope(false, true, organizationGroupIds);
     }
 
