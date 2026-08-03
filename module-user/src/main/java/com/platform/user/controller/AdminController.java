@@ -103,9 +103,11 @@ public interface AdminController {
     List<AdminUserAuditEventDto> getRecentActivity(@RequestParam(defaultValue = "20") int limit, @AuthenticationPrincipal Jwt jwt);
 
     /** e.g. { "report:list": "ENABLED", "billing:refund": "HIDDEN" } for this user's current
-     * roles - the same computation /api/me/ui-permissions does for the caller, run for someone else. */
+     * roles - the same computation /api/me/ui-permissions does for the caller, run for someone
+     * else. PLATFORM: any user. ORGANIZATION-scope: only a user who shares an organization with
+     * the caller. */
     @GetMapping("/users/{id}/ui-permissions")
-    Map<String, String> getUserUiPermissions(@PathVariable String id);
+    Map<String, String> getUserUiPermissions(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
 
     /** Registration counts/trend - PLATFORM-scope callers see realm-wide totals, ORGANIZATION-scope
      * callers only their own organization's registrations. */

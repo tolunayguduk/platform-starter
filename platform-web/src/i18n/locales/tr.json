@@ -380,7 +380,8 @@
       "confirmDisable": "Bu kullanıcı devre dışı bırakılsın mı? Artık giriş yapamayacak.",
       "enabled": "Kullanıcı etkinleştirildi.",
       "disabled": "Kullanıcı devre dışı bırakıldı.",
-      "error": "Kullanıcı durumu güncellenemedi."
+      "error": "Kullanıcı durumu güncellenemedi.",
+      "platformOnly": "Bir kullanıcıyı yalnızca platform yöneticisi etkinleştirebilir veya devre dışı bırakabilir."
     },
     "bulk": {
       "selectedCount": "{{count}} seçildi",

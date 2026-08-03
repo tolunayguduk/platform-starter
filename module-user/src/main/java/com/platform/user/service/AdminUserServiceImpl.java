@@ -247,10 +247,10 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (!enabled && keycloakUserId.equals(currentAdminKeycloakUserId)) {
             throw new BusinessException("USER-4003", "error.admin.self_disable", "Cannot disable your own account");
         }
-        AdminAccessScope callerScope = adminAccessScopeService.resolve(currentAdminKeycloakUserId);
-        if (!callerScope.platformScoped()) {
-            assertSharesOrganization(callerScope, keycloakUserId);
-        }
+        // PLATFORM-only, unlike role assignment or removal - a manager runs their organization's
+        // membership, but locking someone out of the platform entirely is an account-level action
+        // only ADMIN performs.
+        adminAccessScopeService.requirePlatformScope(currentAdminKeycloakUserId);
         keycloakAdminClient.setUserEnabled(keycloakUserId, enabled);
     }
 
@@ -271,7 +271,11 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public Map<String, String> getUserUiPermissions(String keycloakUserId) {
+    public Map<String, String> getUserUiPermissions(String keycloakUserId, String callerKeycloakUserId) {
+        AdminAccessScope callerScope = adminAccessScopeService.resolve(callerKeycloakUserId);
+        if (!callerScope.platformScoped()) {
+            assertSharesOrganization(callerScope, keycloakUserId);
+        }
         Set<String> roles = adminAccessScopeService.resolveUserRoles(keycloakUserId, keycloakAdminClient.listRealmRoles());
         return uiPermissionsService.getUiPermissions(roles);
     }

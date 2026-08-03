@@ -63,8 +63,9 @@ public interface AdminUserService {
     void updateUserRoles(UpdateUserRolesCommand command);
 
     /** Enable/disable the account - a disabled user cannot obtain a token from Keycloak at all.
-     * currentAdminKeycloakUserId guards against an admin disabling their own account, and (if
-     * org-scoped) against reaching outside their own organization. */
+     * PLATFORM-scope only: a manager runs their organization's membership and roles, but locking
+     * someone out of the platform entirely is an account-level action only ADMIN performs.
+     * currentAdminKeycloakUserId also guards against an admin disabling their own account. */
     void updateUserStatus(String keycloakUserId, boolean enabled, String currentAdminKeycloakUserId);
 
     /** Admin-panel edit of username/email - still routed straight through to Keycloak,
@@ -85,8 +86,9 @@ public interface AdminUserService {
 
     /** Same computation UiPermissionsService already does for "me" (see UiPermissionsController),
      * run for this user's current roles instead - lets an admin see exactly which UI functions
-     * this user's roles let them see/use, without duplicating the ENABLED/DISABLED/HIDDEN logic. */
-    Map<String, String> getUserUiPermissions(String keycloakUserId);
+     * this user's roles let them see/use, without duplicating the ENABLED/DISABLED/HIDDEN logic.
+     * PLATFORM: any user. ORGANIZATION-scope: only a user who shares an organization with the caller. */
+    Map<String, String> getUserUiPermissions(String keycloakUserId, String callerKeycloakUserId);
 
     /** Registration counts/trend - unrestricted for a PLATFORM-scope caller, confined to the
      * caller's own organization(s) otherwise, same scoping rule as listUsers. */

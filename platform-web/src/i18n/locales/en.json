@@ -380,7 +380,8 @@
       "confirmDisable": "Disable this user? They will not be able to log in.",
       "enabled": "User enabled.",
       "disabled": "User disabled.",
-      "error": "Failed to update user status."
+      "error": "Failed to update user status.",
+      "platformOnly": "Only a platform administrator can enable or disable a user."
     },
     "bulk": {
       "selectedCount": "{{count}} selected",

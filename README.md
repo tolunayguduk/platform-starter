@@ -253,6 +253,7 @@ statik rol adı bile yok — admin panelinin düzenleyebileceği rol listesi
 | Şifre (hash) | Keycloak credential store | Uygulama koduna **hiçbir zaman** ulaşmaz — `KeycloakTokenClient` şifreyi Keycloak'a iletir, hiçbir yerde saklamaz |
 | `sub` (Keycloak user id) | Keycloak user id (UUID) | Uygulamadaki TEK kullanıcı tanımlayıcısı — `user_profile`/`user_contact`/`user_consent`'in PK/FK'si bu id, gerçek bir foreign key değil (Keycloak dışarıda) |
 | Realm rolleri: `ADMIN`, `MANAGER`, `USER`, `AUDITOR`, ... | Keycloak realm role tanımları + JWT `realm_access.roles` claim'i | **Rol tanımı ve kullanıcı-rol ataması sadece burada var** — `KeycloakRoleMapper.isApplicationRole` JWT'den okurken Keycloak'ın kendi bookkeeping rollerini (`offline_access`, `default-roles-*`) eler; admin panelinin rol listesi `KeycloakAdminClient.listRealmRoles()` ile aynı realm'den canlı çekilir |
+| Organizasyonlar | Keycloak Group'lar (`platform` realminde, alt-grup yok — bkz. `KeycloakAdminClient.createGroup`/`listGroups`) | Ayrı bir "organization" tablosu **yok** — her organizasyon bir Keycloak Group, üyelik de Group membership'i. `description` (Hakkımızda), `coverImageUrl`, `logoImageUrl`, `requiresApproval` gibi ek alanlar Group'un native alanı olmadığı için attribute olarak tutulur (`KeycloakAdminClientImpl.mergeGroupAttributes` - read-modify-write, tek attribute set etmek diğerlerini silmesin diye) |
 | SSO session / refresh token durumu | Keycloak'ın kendi internal veritabanı | Uygulamanın hiçbir tablosunda karşılığı yok |
 | Sosyal login federasyonu (Google/GitHub/Facebook) | Keycloak identity provider config | `docker/keycloak/realm-platform.json` → `identityProviders` (şu an `enabled: false`) |
 
@@ -286,6 +287,15 @@ kullanıcıyı doğrudan Keycloak'ın `sub` id'siyle (`keycloak_user_id` kolonu)
 |---|---|---|
 | `platform_rev_info` | `id`, `timestamp`, `username`, `client_ip`, `trace_id`, `record_hash`, `previous_hash` | Her değişiklik revizyonu — kim, nereden, ne zaman + zincir hash (DB'de doğrudan satır değiştirmeyi tespit eder) |
 | `user_profile_aud`, `user_contact_aud`, `user_consent_aud`, `role_permission_aud` | İlgili tablonun tüm kolonları + `rev`, `revtype` (0=ADD/1=MOD/2=DEL) | `@Audited` işaretli her entity'nin tam geçmişi — kim ne zaman neyi değiştirdi |
+
+**Organizasyon yönetimi** — kimlik değil, Keycloak Group üyeliğinin üstüne inşa edilen yerel
+workflow/yetkilendirme verisi (`role_state` ile aynı kategori — Keycloak'ın hiç bilmediği, bu
+uygulamaya özgü local policy). `@Audited` değiller (bkz. kendi entity yorumları):
+
+| Tablo | Kolonlar | Not |
+|---|---|---|
+| `organization_membership_request` | `id`, `organization_id`, `keycloak_user_id`, `request_type` (`INVITE`/`JOIN_REQUEST`), `status` (`PENDING`/`APPROVED`/`REJECTED`), `initiated_by_keycloak_user_id`, `created_at`, `resolved_at` | Keycloak'ta "member / not-member" dışında bir "pending" kavramı yok — bekleyen davet/katılım talepleri burada tutulur. Bir talep `APPROVED` olduğu an gerçek Keycloak grup üyeliği o anda verilir (`OrganizationMembershipService` self-service tarafı: davet kabul/katılım talebi; `AdminOrganizationService` yönetici tarafı: davet gönderme/talep onaylama) |
+| `organization_manager` | `id`, `organization_id`, `keycloak_user_id`, `granted_at`, `granted_by_keycloak_user_id` | Bir organizasyonu kimin yönetebileceğinin **tek** kaynağı — herhangi bir Keycloak rolüyle (örn. `MANAGER`) hiçbir ilgisi yok. Sadece bu tabloda satırı olan kullanıcı o organizasyonu yönetir; bir organizasyona üye olmak, onu yönetebilmek anlamına gelmez (bkz. `AdminAccessScopeService.resolve` — `organizationGroupIds` bu tablodan gelir, Keycloak grup üyeliğinden değil) |
 
 ### 3) Redis — sadece türetilmiş veri (cache), hiç kişisel veri yok
 
@@ -324,6 +334,10 @@ bilgilerinin merkezi saklama yeri.
 | Vault ile secret yönetimi | `application.yml` → `spring.config.import: vault://`, `docker-compose.yml` → `vault` servisi |
 | Maven | Tüm proje Maven multi-module |
 | Katmanlı paket yapısı, MapStruct ile model dönüşümü | `module-user`, `platform-app`, `platform-security-starter/integration` — bkz. "Katmanlı paket yapısı" bölümü |
+| Çoklu-kiracı organizasyon yapısı (Keycloak Group = organizasyon) | `AdminOrganizationService` (yönetim), `OrganizationDirectoryService` (herkese açık gözatma), `KeycloakAdminClient.createGroup`/`getGroup`/`mergeGroupAttributes` |
+| Organizasyon yönetim yetkisi role değil, açık bir tabloya bağlı (rol sadece platform genelini belirler) | `module-user/.../entity/OrganizationManager`, `AdminAccessScopeService.resolve` — `RoleScope` artık sadece `NONE`/`PLATFORM` |
+| Davet + kendiliğinden katılım, ikisi de organizasyon bazında onaya tabi olabilir | `module-user/.../entity/OrganizationMembershipRequest`, `OrganizationMembershipService` (kullanıcı tarafı: kabul/red/katıl/ayrıl), `AdminOrganizationService` (yönetici tarafı: davet gönder/talep onayla-reddet) |
+| Her organizasyonun ve her kullanıcının herkese açık bir profil sayfası | `OrganizationDirectoryController`/`UserDirectoryController` (`/api/organizations/{id}`, `/api/users/{id}`), `platform-web/src/pages/organizations`, `platform-web/src/pages/users` |
 
 ## Bilinçli olarak eksik bırakılanlar (sıradaki adımlar)
 
@@ -340,6 +354,11 @@ bilgilerinin merkezi saklama yeri.
   basitleştirme - bir demo/starter için yeterli, ama XSS'e karşı üretimde httpOnly cookie +
   BFF (backend-for-frontend) pattern'i ya da en azından refresh token'ı memory-only tutup
   sayfa yenilemede yeniden login isteme değerlendirilmeli.
+- **Otomatik test yok**: ne backend'de (JUnit) ne frontend'de (Vitest/Playwright) tek bir test
+  dosyası bulunmuyor - bugüne kadarki tüm doğrulama elle (curl / tarayıcı) yapıldı. Çoklu-kiracı
+  izolasyonu gibi güvenlik açısından kritik davranışların kalıcı bir regresyon güvencesi yok.
+- **Login'de rate limiting yok**: `KeycloakTokenClient`'ın parola-grant çağrısına kaba kuvvet
+  (brute-force) koruması eklenmedi.
 
 ## Yeni bir modül eklemek
 

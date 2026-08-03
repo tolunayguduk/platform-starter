@@ -1,5 +1,5 @@
 import { useEffect, useState, type Key } from 'react';
-import { App, Button, Card, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Input, Segmented, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
 import { useAdminAccessScope } from '../../../hooks/useAdminAccessScope';
@@ -107,25 +107,29 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
             <Button size="small" onClick={() => setBulkAssignOpen(true)}>
               {t('admin.bulk.assignRoles')}
             </Button>
-            <Button size="small" loading={bulkSaving} onClick={() => handleBulkStatusChange(true)}>
-              {t('admin.bulk.enable')}
-            </Button>
-            <Button
-              size="small"
-              danger
-              loading={bulkSaving}
-              onClick={() =>
-                modal.confirm({
-                  title: t('admin.bulk.confirmDisable', { count: selectedRowKeys.length }),
-                  okButtonProps: { danger: true },
-                  okText: t('admin.bulk.disable'),
-                  cancelText: t('admin.editRow.cancel'),
-                  onOk: () => handleBulkStatusChange(false),
-                })
-              }
-            >
-              {t('admin.bulk.disable')}
-            </Button>
+            {scope?.platformScoped && (
+              <>
+                <Button size="small" loading={bulkSaving} onClick={() => handleBulkStatusChange(true)}>
+                  {t('admin.bulk.enable')}
+                </Button>
+                <Button
+                  size="small"
+                  danger
+                  loading={bulkSaving}
+                  onClick={() =>
+                    modal.confirm({
+                      title: t('admin.bulk.confirmDisable', { count: selectedRowKeys.length }),
+                      okButtonProps: { danger: true },
+                      okText: t('admin.bulk.disable'),
+                      cancelText: t('admin.editRow.cancel'),
+                      onOk: () => handleBulkStatusChange(false),
+                    })
+                  }
+                >
+                  {t('admin.bulk.disable')}
+                </Button>
+              </>
+            )}
             <Button size="small" onClick={() => setSelectedRowKeys([])}>
               {t('admin.bulk.clearSelection')}
             </Button>
@@ -168,6 +172,15 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
             render: (status: string, record: AdminUser) => {
               const enabled = status === 'ACTIVE';
               const isSelf = record.username === currentUser?.username;
+              if (!scope?.platformScoped) {
+                return (
+                  <Tooltip title={t('admin.status.platformOnly')}>
+                    <Tag color={enabled ? 'green' : 'default'}>
+                      {enabled ? t('admin.roleFunctions.enabledTag') : t('admin.roleFunctions.disabledTag')}
+                    </Tag>
+                  </Tooltip>
+                );
+              }
               return (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Segmented

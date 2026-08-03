@@ -15,6 +15,11 @@ import { UserFunctionAccessView } from './UserFunctionAccessView';
 // history (see AdminTableTab's hasAudit gating below).
 const PLATFORM_SCOPE_ONLY_TABLE_KEYS = new Set(['USER_CONSENT']);
 
+// Profile and contact info are the user's own - only the user themselves (self-service) or a
+// platform-scope admin edits them, never an organization manager on someone else's behalf. Unlike
+// USER_CONSENT above, these tabs stay visible (just read-only) rather than hidden entirely.
+const PLATFORM_SCOPE_ONLY_WRITE_TABLE_KEYS = new Set(['USER_PROFILE', 'USER_CONTACT']);
+
 export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUser | null }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
@@ -63,7 +68,7 @@ export function DatabaseTablesBrowser({ selectedUser }: { selectedUser: AdminUse
                     hasAudit={table.hasAudit && !!scope?.platformScoped}
                     editableColumns={table.editableColumns}
                     filterUserId={selectedUser.id}
-                    readOnly={table.key === 'USER_PROFILE' && !scope?.platformScoped}
+                    readOnly={PLATFORM_SCOPE_ONLY_WRITE_TABLE_KEYS.has(table.key) && !scope?.platformScoped}
                   />
                 ),
               })),

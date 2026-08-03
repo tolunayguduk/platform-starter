@@ -115,11 +115,12 @@ public class AdminTableServiceImpl implements AdminTableService {
 
     /** PERMISSION/ROLE_PERMISSION are the role/function definitions themselves - organization
      * admins manage user↔role assignment and their own organization's membership, never these.
-     * USER_PROFILE (name, birth date, avatar, locale) is a user's own identity/profile info - an
-     * organization admin manages membership and roles, never edits this on someone else's behalf;
-     * only the user themselves (self-service) or a platform-scope admin can. */
+     * USER_PROFILE (name, birth date, avatar, locale) and USER_CONTACT (phone, address, city,
+     * country) are a user's own identity/contact info - an organization admin manages membership
+     * and roles, never edits this on someone else's behalf; only the user themselves
+     * (self-service) or a platform-scope admin can. */
     private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_WRITE_KEYS =
-            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION, AdminTableKey.USER_PROFILE);
+            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION, AdminTableKey.USER_PROFILE, AdminTableKey.USER_CONTACT);
 
     /** PERMISSION/ROLE_PERMISSION aren't user data at all - platform-wide role/function
      * definitions, same reasoning as the write restriction above. USER_CONSENT is sensitive GDPR

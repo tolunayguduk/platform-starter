@@ -110,8 +110,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public Map<String, String> getUserUiPermissions(String id) {
-        return adminUserService.getUserUiPermissions(id);
+    public Map<String, String> getUserUiPermissions(String id, Jwt jwt) {
+        return adminUserService.getUserUiPermissions(id, jwt.getSubject());
     }
 
     @Override
