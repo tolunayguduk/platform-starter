@@ -4,8 +4,10 @@ import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.CreateOrganizationRequestDto;
 import com.platform.user.controller.model.OrganizationDto;
 import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.RenameOrganizationRequestDto;
 import com.platform.user.controller.model.UpdateMembershipApprovalRequestDto;
 import com.platform.user.controller.model.UpdateOrganizationDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateOrganizationImagesRequestDto;
 import com.platform.user.mapper.AdminOrganizationMapper;
 import com.platform.user.mapper.AdminUserMapper;
 import com.platform.user.service.AdminOrganizationService;
@@ -44,6 +46,16 @@ public class AdminOrganizationControllerImpl implements AdminOrganizationControl
     @Override
     public void updateOrganizationDescription(String id, UpdateOrganizationDescriptionRequestDto request, Jwt jwt) {
         adminOrganizationService.updateOrganizationDescription(id, request.description(), jwt.getSubject());
+    }
+
+    @Override
+    public void renameOrganization(String id, RenameOrganizationRequestDto request, Jwt jwt) {
+        adminOrganizationService.renameOrganization(id, request.name(), jwt.getSubject());
+    }
+
+    @Override
+    public void updateOrganizationImages(String id, UpdateOrganizationImagesRequestDto request, Jwt jwt) {
+        adminOrganizationService.updateOrganizationImages(id, request.coverImageUrl(), request.logoImageUrl(), jwt.getSubject());
     }
 
     @Override

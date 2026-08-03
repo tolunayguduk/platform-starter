@@ -3,8 +3,10 @@ package com.platform.user.controller;
 import com.platform.user.controller.model.JoinOrganizationRequestDto;
 import com.platform.user.controller.model.JoinOrganizationResultDto;
 import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.OrganizationSearchResultDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,4 +33,14 @@ public interface OrganizationMembershipController {
     /** Self-service join via an organization's permanent invite link/code. */
     @PostMapping("/api/me/organizations/join")
     JoinOrganizationResultDto joinOrganization(@RequestBody JoinOrganizationRequestDto request, @AuthenticationPrincipal Jwt jwt);
+
+    /** Leaves an organization the caller is currently a member of - the landing page's "Leave"
+     * button, counterpart to the "Join" button. */
+    @DeleteMapping("/api/me/organizations/{id}/membership")
+    void leaveOrganization(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
+
+    /** Every organization the caller currently belongs to - backs the Settings page's "My
+     * Organizations" tab. */
+    @GetMapping("/api/me/organizations")
+    List<OrganizationSearchResultDto> listMyOrganizations(@AuthenticationPrincipal Jwt jwt);
 }

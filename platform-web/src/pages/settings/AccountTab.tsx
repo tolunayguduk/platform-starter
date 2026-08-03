@@ -10,7 +10,6 @@ import { AvatarNameFields } from './account/AvatarNameFields';
 import { PersonalInfoSection } from './account/PersonalInfoSection';
 import { ContactInfoSection } from './account/ContactInfoSection';
 import { ChangePasswordSection } from './account/ChangePasswordSection';
-import { OrganizationMembershipSection } from './account/OrganizationMembershipSection';
 import { ConsentHistorySection } from './account/ConsentHistorySection';
 import layoutStyles from './account/profileLayout.module.css';
 
@@ -68,7 +67,6 @@ export function AccountTab() {
       </Form>
 
       <ChangePasswordSection />
-      <OrganizationMembershipSection />
       <ConsentHistorySection consents={profile.consents} />
     </div>
   );

@@ -1,5 +1,6 @@
 import { apiFetch } from './client';
 import type { OrganizationMembershipRequest } from '../types/admin';
+import type { OrganizationSearchResult } from '../types/organization';
 
 /** Self-service organization membership - always scoped to the caller's own JWT subject, same
  * tier as meApi.ts (no admin-panel access required). */
@@ -29,4 +30,18 @@ export function joinOrganization(accessToken: string, organizationId: string): P
     body: { organizationId },
     accessToken,
   });
+}
+
+/** Leaves an organization the caller is currently a member of - the landing page's "Leave" button. */
+export function leaveOrganization(accessToken: string, organizationId: string): Promise<void> {
+  return apiFetch<void>(`/api/me/organizations/${encodeURIComponent(organizationId)}/membership`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
+/** Every organization the caller currently belongs to - backs the Settings page's "My
+ * Organizations" tab. */
+export function fetchMyOrganizations(accessToken: string): Promise<OrganizationSearchResult[]> {
+  return apiFetch<OrganizationSearchResult[]>('/api/me/organizations', { accessToken });
 }

@@ -4,7 +4,8 @@
     "profile": "Profil",
     "settings": "Ayarlar",
     "admin": "Admin Paneli",
-    "logout": "Çıkış Yap"
+    "logout": "Çıkış Yap",
+    "searchOrganizations": "Organizasyon ara..."
   },
   "login": {
     "title": "Giriş Yap",
@@ -84,14 +85,7 @@
     "confirmNewPassword": "Yeni Şifre (Tekrar)",
     "changePassword": "Şifreyi Güncelle",
     "passwordSuccess": "Şifre başarıyla güncellendi.",
-    "passwordError": "Şifre güncellenemedi.",
-    "organizationSection": "Bir Organizasyona Katıl",
-    "organizationSectionHint": "Katılmak istediğiniz organizasyonun davet linkindeki kimliğini veya kodunu girin. Organizasyonun ayarına göre hemen üye olabilir ya da yönetici onayı beklenebilir.",
-    "organizationIdPlaceholder": "Organizasyon kimliği",
-    "organizationJoinButton": "Katılım Talep Et",
-    "organizationJoined": "Organizasyona katıldınız.",
-    "organizationJoinPending": "Katılım talebi gönderildi - yönetici onayı bekleniyor.",
-    "organizationJoinError": "Katılım talebi gönderilemedi."
+    "passwordError": "Şifre güncellenemedi."
   },
   "settings": {
     "title": "Ayarlar",
@@ -100,6 +94,7 @@
       "theme": "Tema",
       "language": "Dil",
       "account": "Hesap",
+      "organizations": "Organizasyonlar",
       "notifications": "Bildirimler",
       "security": "Güvenlik",
       "billing": "Faturalandırma"
@@ -402,5 +397,34 @@
   "notFound": {
     "subtitle": "Aradığınız sayfa bulunamadı.",
     "backHome": "Anasayfaya Dön"
+  },
+  "organization": {
+    "about": "Hakkımızda",
+    "noAbout": "Bu organizasyon henüz bir hakkımızda bölümü eklemedi.",
+    "memberCount": "{{count}} üye",
+    "editProfile": "Profili Düzenle",
+    "editSuccess": "Organizasyon sayfası güncellendi.",
+    "editError": "Organizasyon sayfası güncellenemedi.",
+    "nameLabel": "Organizasyon Adı",
+    "coverImageLabel": "Kapak Fotoğrafı URL",
+    "logoImageLabel": "Profil Fotoğrafı URL",
+    "aboutLabel": "Hakkımızda",
+    "aboutPlaceholder": "Bu organizasyonun ne hakkında olduğunu anlatın...",
+    "membersModalTitle": "Üyeler",
+    "pending": "Talep Bekleniyor",
+    "join": "Katıl",
+    "joined": "Bu organizasyona katıldınız.",
+    "joinRequested": "Katılım talebi gönderildi - yönetici onayı bekleniyor.",
+    "joinError": "Katılım talebi gönderilemedi.",
+    "leave": "Ayrıl",
+    "confirmLeave": "Bu organizasyondan ayrılmak istediğinize emin misiniz?",
+    "left": "Organizasyondan ayrıldınız.",
+    "leaveError": "Organizasyondan ayrılınamadı.",
+    "notFoundTitle": "Organizasyon bulunamadı",
+    "notFoundSubtitle": "Bu organizasyon mevcut değil veya link hatalı."
+  },
+  "myOrganizations": {
+    "hint": "Şu anda üye olduğunuz organizasyonlar. Sayfasını açmak için birine tıklayın.",
+    "empty": "Henüz herhangi bir organizasyona üye değilsiniz - navbar'daki arama kutusunu kullanarak bulabilirsiniz."
   }
 }

@@ -4,8 +4,10 @@ import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.CreateOrganizationRequestDto;
 import com.platform.user.controller.model.OrganizationDto;
 import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.RenameOrganizationRequestDto;
 import com.platform.user.controller.model.UpdateMembershipApprovalRequestDto;
 import com.platform.user.controller.model.UpdateOrganizationDescriptionRequestDto;
+import com.platform.user.controller.model.UpdateOrganizationImagesRequestDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,6 +42,16 @@ public interface AdminOrganizationController {
     @PutMapping("/{id}")
     void updateOrganizationDescription(@PathVariable String id, @RequestBody UpdateOrganizationDescriptionRequestDto request,
                                         @AuthenticationPrincipal Jwt jwt);
+
+    /** Landing-page name edit. PLATFORM: any organization. ORGANIZATION-scope: only their own. */
+    @PutMapping("/{id}/name")
+    void renameOrganization(@PathVariable String id, @RequestBody RenameOrganizationRequestDto request, @AuthenticationPrincipal Jwt jwt);
+
+    /** Landing-page cover/profile photo edit. PLATFORM: any organization. ORGANIZATION-scope: only
+     * their own. */
+    @PutMapping("/{id}/images")
+    void updateOrganizationImages(@PathVariable String id, @RequestBody UpdateOrganizationImagesRequestDto request,
+                                   @AuthenticationPrincipal Jwt jwt);
 
     /** Whether a self-service join request needs this organization's manager to approve it, or is
      * granted immediately. PLATFORM: any organization. ORGANIZATION-scope: only their own. */

@@ -25,6 +25,8 @@ export interface Organization {
   id: string;
   name: string;
   description: string | null;
+  coverImageUrl: string | null;
+  logoImageUrl: string | null;
   memberCount: number;
   membershipRequiresApproval: boolean;
 }

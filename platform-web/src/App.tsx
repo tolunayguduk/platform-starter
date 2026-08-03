@@ -7,6 +7,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
+import { OrganizationLandingPage } from './pages/organizations/OrganizationLandingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
       >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/organizations/:id" element={<OrganizationLandingPage />} />
         <Route
           path="/admin"
           element={

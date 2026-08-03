@@ -4,7 +4,8 @@
     "profile": "Profile",
     "settings": "Settings",
     "admin": "Admin Panel",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "searchOrganizations": "Search organizations..."
   },
   "login": {
     "title": "Log In",
@@ -84,14 +85,7 @@
     "confirmNewPassword": "Confirm New Password",
     "changePassword": "Update Password",
     "passwordSuccess": "Password updated successfully.",
-    "passwordError": "Failed to update password.",
-    "organizationSection": "Join an Organization",
-    "organizationSectionHint": "Enter an organization's invite link id or code to request to join it. Depending on the organization's settings, you may join immediately or need the manager's approval.",
-    "organizationIdPlaceholder": "Organization id",
-    "organizationJoinButton": "Request to Join",
-    "organizationJoined": "You've joined the organization.",
-    "organizationJoinPending": "Join request sent - pending the manager's approval.",
-    "organizationJoinError": "Failed to send the join request."
+    "passwordError": "Failed to update password."
   },
   "settings": {
     "title": "Settings",
@@ -100,6 +94,7 @@
       "theme": "Theme",
       "language": "Language",
       "account": "Account",
+      "organizations": "Organizations",
       "notifications": "Notifications",
       "security": "Security",
       "billing": "Billing"
@@ -402,5 +397,34 @@
   "notFound": {
     "subtitle": "Sorry, the page you visited does not exist.",
     "backHome": "Back to Home"
+  },
+  "organization": {
+    "about": "About",
+    "noAbout": "This organization hasn't added an about section yet.",
+    "memberCount": "{{count}} members",
+    "editProfile": "Edit Profile",
+    "editSuccess": "Organization page updated.",
+    "editError": "Failed to update the organization page.",
+    "nameLabel": "Organization Name",
+    "coverImageLabel": "Cover Photo URL",
+    "logoImageLabel": "Profile Photo URL",
+    "aboutLabel": "About",
+    "aboutPlaceholder": "Tell people what this organization is about...",
+    "membersModalTitle": "Members",
+    "pending": "Request Pending",
+    "join": "Join",
+    "joined": "You've joined this organization.",
+    "joinRequested": "Join request sent - pending the manager's approval.",
+    "joinError": "Failed to send the join request.",
+    "leave": "Leave",
+    "confirmLeave": "Leave this organization?",
+    "left": "You've left the organization.",
+    "leaveError": "Failed to leave the organization.",
+    "notFoundTitle": "Organization not found",
+    "notFoundSubtitle": "This organization doesn't exist, or the link is incorrect."
+  },
+  "myOrganizations": {
+    "hint": "Organizations you're currently a member of. Click one to open its page.",
+    "empty": "You're not a member of any organization yet - search for one using the navbar."
   }
 }

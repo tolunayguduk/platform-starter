@@ -7,16 +7,18 @@ import {
   BellOutlined,
   SafetyOutlined,
   CreditCardOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ThemeSettingsTab } from './settings/ThemeSettingsTab';
 import { LanguageSettingsTab } from './settings/LanguageSettingsTab';
 import { AccountTab } from './settings/AccountTab';
+import { MyOrganizationsTab } from './settings/organizations/MyOrganizationsTab';
 import { ComingSoonTab } from './settings/ComingSoonTab';
 import styles from './SettingsPage.module.css';
 
-const TAB_KEYS = ['theme', 'language', 'account', 'notifications', 'security', 'billing'];
+const TAB_KEYS = ['theme', 'language', 'account', 'organizations', 'notifications', 'security', 'billing'];
 
 function CategoryLabel({ icon, text }: { icon: ReactNode; text: string }) {
   return (
@@ -38,6 +40,11 @@ export function SettingsPage() {
       key: 'account',
       label: <CategoryLabel icon={<UserOutlined />} text={t('settings.categories.account')} />,
       children: <AccountTab />,
+    },
+    {
+      key: 'organizations',
+      label: <CategoryLabel icon={<TeamOutlined />} text={t('settings.categories.organizations')} />,
+      children: <MyOrganizationsTab />,
     },
     {
       key: 'theme',

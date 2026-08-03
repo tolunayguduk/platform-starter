@@ -3,7 +3,9 @@ package com.platform.user.controller;
 import com.platform.user.controller.model.JoinOrganizationRequestDto;
 import com.platform.user.controller.model.JoinOrganizationResultDto;
 import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.OrganizationSearchResultDto;
 import com.platform.user.mapper.AdminOrganizationMapper;
+import com.platform.user.mapper.OrganizationDirectoryMapper;
 import com.platform.user.service.OrganizationMembershipService;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,11 +17,14 @@ public class OrganizationMembershipControllerImpl implements OrganizationMembers
 
     private final OrganizationMembershipService organizationMembershipService;
     private final AdminOrganizationMapper adminOrganizationMapper;
+    private final OrganizationDirectoryMapper organizationDirectoryMapper;
 
     public OrganizationMembershipControllerImpl(OrganizationMembershipService organizationMembershipService,
-                                                  AdminOrganizationMapper adminOrganizationMapper) {
+                                                  AdminOrganizationMapper adminOrganizationMapper,
+                                                  OrganizationDirectoryMapper organizationDirectoryMapper) {
         this.organizationMembershipService = organizationMembershipService;
         this.adminOrganizationMapper = adminOrganizationMapper;
+        this.organizationDirectoryMapper = organizationDirectoryMapper;
     }
 
     @Override
@@ -41,5 +46,15 @@ public class OrganizationMembershipControllerImpl implements OrganizationMembers
     public JoinOrganizationResultDto joinOrganization(JoinOrganizationRequestDto request, Jwt jwt) {
         boolean approved = organizationMembershipService.requestToJoin(request.organizationId(), jwt.getSubject());
         return new JoinOrganizationResultDto(approved);
+    }
+
+    @Override
+    public void leaveOrganization(String id, Jwt jwt) {
+        organizationMembershipService.leaveOrganization(id, jwt.getSubject());
+    }
+
+    @Override
+    public List<OrganizationSearchResultDto> listMyOrganizations(Jwt jwt) {
+        return organizationDirectoryMapper.toDtoList(organizationMembershipService.listMyOrganizations(jwt.getSubject()));
     }
 }

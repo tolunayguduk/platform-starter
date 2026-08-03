@@ -50,7 +50,7 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
                 ? keycloakAdminClient.listGroups()
                 : keycloakAdminClient.getUserGroups(callerKeycloakUserId);
         return groups.stream()
-                .map(g -> new OrganizationResult(g.id(), g.name(), g.description(),
+                .map(g -> new OrganizationResult(g.id(), g.name(), g.description(), g.coverImageUrl(), g.logoImageUrl(),
                         keycloakAdminClient.getGroupMembers(g.id()).size(), g.membershipRequiresApproval()))
                 .toList();
     }
@@ -62,13 +62,30 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Organization name required");
         }
         KeycloakGroup group = keycloakAdminClient.createGroup(name.trim());
-        return new OrganizationResult(group.id(), group.name(), group.description(), 0, group.membershipRequiresApproval());
+        return new OrganizationResult(group.id(), group.name(), group.description(), group.coverImageUrl(), group.logoImageUrl(),
+                0, group.membershipRequiresApproval());
     }
 
     @Override
     public void updateOrganizationDescription(String organizationId, String description, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
         keycloakAdminClient.updateGroupDescription(organizationId, description);
+    }
+
+    @Override
+    public void renameOrganization(String organizationId, String name, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        if (name == null || name.isBlank()) {
+            throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Organization name required");
+        }
+        keycloakAdminClient.renameGroup(organizationId, name.trim());
+    }
+
+    @Override
+    public void updateOrganizationImages(String organizationId, String coverImageUrl, String logoImageUrl, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        keycloakAdminClient.updateGroupCoverImage(organizationId, coverImageUrl);
+        keycloakAdminClient.updateGroupLogoImage(organizationId, logoImageUrl);
     }
 
     @Override

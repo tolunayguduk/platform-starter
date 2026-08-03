@@ -352,7 +352,11 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public List<KeycloakGroup> listGroups() {
-        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/groups")
+        // Keycloak's bulk /groups listing omits "attributes" entirely unless briefRepresentation
+        // is explicitly turned off - without this, every group here would come back with a null
+        // description/coverImageUrl/logoImageUrl and a wrongly-defaulted membershipRequiresApproval,
+        // even though the single-group GET (getGroup) always includes them.
+        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/groups?briefRepresentation=false")
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<KeycloakGroupRepresentation>>() {
                 });
@@ -389,7 +393,7 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
         }
         String path = location.getPath();
         String id = path.substring(path.lastIndexOf('/') + 1);
-        return new KeycloakGroup(id, name, null, true);
+        return new KeycloakGroup(id, name, null, null, null, true);
     }
 
     @Override
@@ -413,6 +417,50 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @Retry(name = CB_NAME)
     public void updateGroupDescription(String groupId, String description) {
         mergeGroupAttribute(groupId, "description", description == null ? "" : description);
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void renameGroup(String groupId, String newName) {
+        KeycloakGroupRepresentation current = restClient.get().uri("/groups/{id}", groupId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new BusinessException("ADMIN-4042", "error.admin.organization_not_found", "No such organization: " + groupId);
+                })
+                .body(KeycloakGroupRepresentation.class);
+        if (current == null) {
+            throw new BusinessException("ADMIN-4042", "error.admin.organization_not_found", "No such organization: " + groupId);
+        }
+        Map<String, Object> body = Map.of(
+                "name", newName,
+                "attributes", current.attributes() != null ? current.attributes() : Map.of());
+        restClient.put().uri("/groups/{id}", groupId)
+                .body(body)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    if (response.getStatusCode().value() == 409) {
+                        throw new BusinessException("AUTHZ-4094",
+                                "error.admin.organization_exists", "Keycloak rejected duplicate organization name: " + newName);
+                    }
+                    throw new TechnicalException("AUTHZ-4017",
+                            "Keycloak admin API rejected group rename: HTTP " + response.getStatusCode());
+                })
+                .toBodilessEntity();
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void updateGroupCoverImage(String groupId, String coverImageUrl) {
+        mergeGroupAttribute(groupId, "coverImageUrl", coverImageUrl == null ? "" : coverImageUrl);
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void updateGroupLogoImage(String groupId, String logoImageUrl) {
+        mergeGroupAttribute(groupId, "logoImageUrl", logoImageUrl == null ? "" : logoImageUrl);
     }
 
     @Override
@@ -473,7 +521,9 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public List<KeycloakGroup> getUserGroups(String keycloakUserId) {
-        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/users/{id}/groups", keycloakUserId)
+        // Same briefRepresentation gotcha as listGroups() - omitting it would silently null out
+        // description/coverImageUrl/logoImageUrl for every organization-scoped caller's own org(s).
+        List<KeycloakGroupRepresentation> groups = restClient.get().uri("/users/{id}/groups?briefRepresentation=false", keycloakUserId)
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<KeycloakGroupRepresentation>>() {
                 });
@@ -510,10 +560,12 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
 
     private KeycloakGroup toGroup(KeycloakGroupRepresentation representation) {
         String description = firstAttributeValue(representation, "description");
+        String coverImageUrl = firstAttributeValue(representation, "coverImageUrl");
+        String logoImageUrl = firstAttributeValue(representation, "logoImageUrl");
         // Absent means "not yet configured" - defaults to the safe/locked-down choice, same
         // reasoning as role_state.scope defaulting to NONE.
         String requiresApproval = firstAttributeValue(representation, "requiresApproval");
-        return new KeycloakGroup(representation.id(), representation.name(), description,
+        return new KeycloakGroup(representation.id(), representation.name(), description, coverImageUrl, logoImageUrl,
                 requiresApproval == null || Boolean.parseBoolean(requiresApproval));
     }
 

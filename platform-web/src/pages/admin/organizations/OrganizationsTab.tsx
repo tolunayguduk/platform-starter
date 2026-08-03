@@ -6,6 +6,7 @@ import { useAdminAccessScope } from '../../../hooks/useAdminAccessScope';
 import { ApiError } from '../../../api/client';
 import { deleteOrganization, fetchOrganizations, updateOrganizationDescription } from '../../../api/adminApi';
 import type { Organization } from '../../../types/admin';
+import { OrganizationNameLink } from '../../../components/OrganizationNameLink';
 import { AddOrganizationModal } from './AddOrganizationModal';
 import { OrganizationDetailPanel } from './OrganizationDetailPanel';
 
@@ -94,7 +95,12 @@ export function OrganizationsTab() {
           expandedRowRender: (record) => <OrganizationDetailPanel organization={record} onOrganizationChanged={loadOrganizations} />,
         }}
         columns={[
-          { title: t('admin.organizations.column.name'), dataIndex: 'name', width: 220 },
+          {
+            title: t('admin.organizations.column.name'),
+            dataIndex: 'name',
+            width: 220,
+            render: (_: unknown, org: Organization) => <OrganizationNameLink id={org.id} name={org.name} logoImageUrl={org.logoImageUrl} />,
+          },
           {
             title: t('admin.organizations.column.description'),
             key: 'description',

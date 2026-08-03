@@ -1,0 +1,31 @@
+.wrapper {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 24px;
+  min-width: 0;
+}
+
+.search {
+  width: 100%;
+  max-width: 360px;
+}
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.resultName {
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultCount {
+  flex-shrink: 0;
+  font-size: 12px;
+}

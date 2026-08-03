@@ -102,8 +102,18 @@ public interface KeycloakAdminClient {
     KeycloakGroup getGroup(String groupId);
 
     /** Stored as a Keycloak group attribute (Groups have no native description field the way
-     * Roles do). */
+     * Roles do). Doubles as the "About us" text on the organization's landing page. */
     void updateGroupDescription(String groupId, String description);
+
+    /** Renames the organization - rejects a duplicate name the same way createGroup does. */
+    void renameGroup(String groupId, String newName);
+
+    /** Landing-page cover photo, stored as a group attribute (a URL, same convention as a user's
+     * own profile avatarUrl - no file storage in this app, just a link). */
+    void updateGroupCoverImage(String groupId, String coverImageUrl);
+
+    /** Landing-page profile photo/logo, same URL-attribute convention as updateGroupCoverImage. */
+    void updateGroupLogoImage(String groupId, String logoImageUrl);
 
     /** Whether a user self-requesting to join this organization needs a manager's approval, or
      * becomes a member immediately - see MembershipRequestType.JOIN_REQUEST. */

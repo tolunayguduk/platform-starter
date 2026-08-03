@@ -69,6 +69,26 @@ export function updateOrganizationDescription(accessToken: string, id: string, d
   });
 }
 
+export function renameOrganization(accessToken: string, id: string, name: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(id)}/name`, {
+    method: 'PUT',
+    body: { name },
+    accessToken,
+  });
+}
+
+export function updateOrganizationImages(
+  accessToken: string,
+  id: string,
+  images: { coverImageUrl: string | null; logoImageUrl: string | null },
+): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(id)}/images`, {
+    method: 'PUT',
+    body: images,
+    accessToken,
+  });
+}
+
 export function deleteOrganization(accessToken: string, id: string): Promise<void> {
   return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(id)}`, {
     method: 'DELETE',

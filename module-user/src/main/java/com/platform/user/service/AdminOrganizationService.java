@@ -24,7 +24,15 @@ public interface AdminOrganizationService {
 
     OrganizationResult createOrganization(String name, String callerKeycloakUserId);
 
+    /** Doubles as the organization's landing-page "About us" text. */
     void updateOrganizationDescription(String organizationId, String description, String callerKeycloakUserId);
+
+    /** Rejects a duplicate name the same way createOrganization does. */
+    void renameOrganization(String organizationId, String name, String callerKeycloakUserId);
+
+    /** Landing-page cover photo and profile photo/logo - both plain URLs, same convention as a
+     * user's own profile avatarUrl (no file storage in this app). Either may be null/blank to clear it. */
+    void updateOrganizationImages(String organizationId, String coverImageUrl, String logoImageUrl, String callerKeycloakUserId);
 
     /** Whether a self-service join request against this organization needs a manager's approval,
      * or is granted immediately - see OrganizationMembershipService.requestToJoin. */

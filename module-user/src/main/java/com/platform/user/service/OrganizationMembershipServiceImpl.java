@@ -9,6 +9,7 @@ import com.platform.user.constant.MembershipRequestType;
 import com.platform.user.entity.OrganizationMembershipRequest;
 import com.platform.user.repository.OrganizationMembershipRequestRepository;
 import com.platform.user.service.model.OrganizationMembershipRequestResult;
+import com.platform.user.service.model.OrganizationSearchResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,6 +100,25 @@ public class OrganizationMembershipServiceImpl implements OrganizationMembership
         }
         membershipRequestRepository.save(request);
         return false;
+    }
+
+    @Override
+    public void leaveOrganization(String organizationId, String keycloakUserId) {
+        keycloakAdminClient.getGroup(organizationId); // throws a clean 404 if the id is garbage
+        Set<String> memberIds = keycloakAdminClient.getGroupMembers(organizationId).stream()
+                .map(KeycloakUserId::id)
+                .collect(Collectors.toSet());
+        if (!memberIds.contains(keycloakUserId)) {
+            throw new BusinessException("USER-4009", "error.admin.not_a_member", "Not a member of this organization");
+        }
+        keycloakAdminClient.removeUserFromGroup(keycloakUserId, organizationId);
+    }
+
+    @Override
+    public List<OrganizationSearchResult> listMyOrganizations(String keycloakUserId) {
+        return keycloakAdminClient.getUserGroups(keycloakUserId).stream()
+                .map(g -> new OrganizationSearchResult(g.id(), g.name(), g.coverImageUrl(), g.logoImageUrl(), keycloakAdminClient.getGroupMembers(g.id()).size()))
+                .toList();
     }
 
     private OrganizationMembershipRequest loadOwnPendingInvite(Long requestId, String keycloakUserId) {

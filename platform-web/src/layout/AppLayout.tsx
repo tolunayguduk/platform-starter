@@ -5,6 +5,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { useThemeSettings } from '../store/ThemeSettingsContext';
 import { getContrastOnColor } from '../utils/contrast';
 import { UserMenu } from './UserMenu';
+import { OrganizationSearchBox } from './OrganizationSearchBox';
 import styles from './AppLayout.module.css';
 
 const { Header, Content } = Layout;
@@ -25,6 +26,7 @@ export function AppLayout() {
             {t('nav.appName')}
           </Typography.Text>
         </Link>
+        <OrganizationSearchBox />
         <UserMenu textColor={navText} overlayColor={navOverlay} />
       </Header>
       <Content className={styles.content} style={contentVars}>

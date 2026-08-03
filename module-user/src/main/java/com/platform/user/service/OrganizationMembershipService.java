@@ -1,6 +1,7 @@
 package com.platform.user.service;
 
 import com.platform.user.service.model.OrganizationMembershipRequestResult;
+import com.platform.user.service.model.OrganizationSearchResult;
 
 import java.util.List;
 
@@ -25,4 +26,14 @@ public interface OrganizationMembershipService {
      * membership was granted immediately (the organization's membershipRequiresApproval is off),
      * false if a pending request was created instead (its manager must approve it). */
     boolean requestToJoin(String organizationId, String keycloakUserId);
+
+    /** Removes the caller's own membership - the self-service counterpart to
+     * AdminOrganizationService.removeMember (which a manager uses unilaterally on someone else).
+     * Rejects if the caller isn't currently a member. */
+    void leaveOrganization(String organizationId, String keycloakUserId);
+
+    /** Every organization this user is currently a member of - backs the Settings page's "My
+     * Organizations" tab. Plain membership, nothing to do with admin-panel access (a caller with
+     * no admin-panel access at all can still be a member of one or more organizations). */
+    List<OrganizationSearchResult> listMyOrganizations(String keycloakUserId);
 }
