@@ -1,5 +1,6 @@
 package com.platform.app.service;
 
+import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.KeycloakTokenClient;
 import com.platform.security.integration.keycloak.model.PasswordGrantRequest;
 import com.platform.security.integration.keycloak.model.RefreshGrantRequest;
@@ -10,9 +11,11 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private final KeycloakTokenClient keycloakTokenClient;
+    private final KeycloakAdminClient keycloakAdminClient;
 
-    public AuthServiceImpl(KeycloakTokenClient keycloakTokenClient) {
+    public AuthServiceImpl(KeycloakTokenClient keycloakTokenClient, KeycloakAdminClient keycloakAdminClient) {
         this.keycloakTokenClient = keycloakTokenClient;
+        this.keycloakAdminClient = keycloakAdminClient;
     }
 
     @Override
@@ -28,5 +31,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(String refreshToken) {
         keycloakTokenClient.endSession(new RefreshGrantRequest(refreshToken));
+    }
+
+    @Override
+    public String getOrganizationName(String organizationId) {
+        return keycloakAdminClient.getGroup(organizationId).name();
     }
 }

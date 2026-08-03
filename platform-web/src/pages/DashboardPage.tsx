@@ -6,6 +6,7 @@ import { fetchUiPermissions } from '../api/permissionsApi';
 import type { UiPermissions } from '../types/permissions';
 import { AccountInfoCard } from './dashboard/AccountInfoCard';
 import { ActionsCard } from './dashboard/ActionsCard';
+import { PendingInvitesCard } from './dashboard/PendingInvitesCard';
 import styles from './DashboardPage.module.css';
 
 export function DashboardPage() {
@@ -28,6 +29,7 @@ export function DashboardPage() {
         {t('dashboard.welcome', { name: user.fullName ?? user.username })}
       </Typography.Title>
 
+      <PendingInvitesCard />
       <AccountInfoCard user={user} />
       <ActionsCard uiPerms={uiPerms} />
     </Space>

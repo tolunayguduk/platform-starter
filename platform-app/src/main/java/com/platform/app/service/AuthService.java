@@ -13,4 +13,9 @@ public interface AuthService {
     TokenResponse refresh(String refreshToken);
 
     void logout(String refreshToken);
+
+    /** Public (permitAll) lookup so the register page can show "You're joining: {name}" instead
+     * of a raw organization id when arriving via an invite link - the visitor has no token yet
+     * at this point. Throws a clean business error if the id doesn't exist. */
+    String getOrganizationName(String organizationId);
 }

@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -362,8 +363,14 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public KeycloakGroup createGroup(String name) {
+        // Explicit from creation rather than relying on toGroup()'s "attribute absent" default,
+        // so the group's own Keycloak representation is self-documenting.
+        Map<String, Object> body = Map.of(
+                "name", name,
+                "attributes", Map.of("requiresApproval", List.of("true"))
+        );
         URI location = restClient.post().uri("/groups")
-                .body(Map.of("name", name))
+                .body(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
                     if (response.getStatusCode().value() == 409) {
@@ -382,25 +389,52 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
         }
         String path = location.getPath();
         String id = path.substring(path.lastIndexOf('/') + 1);
-        return new KeycloakGroup(id, name, null);
+        return new KeycloakGroup(id, name, null, true);
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public KeycloakGroup getGroup(String groupId) {
+        KeycloakGroupRepresentation representation = restClient.get().uri("/groups/{id}", groupId)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, response) -> {
+                    throw new BusinessException("ADMIN-4042", "error.admin.organization_not_found", "No such organization: " + groupId);
+                })
+                .body(KeycloakGroupRepresentation.class);
+        if (representation == null) {
+            throw new BusinessException("ADMIN-4042", "error.admin.organization_not_found", "No such organization: " + groupId);
+        }
+        return toGroup(representation);
     }
 
     @Override
     @CircuitBreaker(name = CB_NAME)
     @Retry(name = CB_NAME)
     public void updateGroupDescription(String groupId, String description) {
-        // PUT /groups/{id} replaces the whole representation - name is required even though only
-        // the description is changing, so the current one has to be fetched first.
+        mergeGroupAttribute(groupId, "description", description == null ? "" : description);
+    }
+
+    @Override
+    @CircuitBreaker(name = CB_NAME)
+    @Retry(name = CB_NAME)
+    public void updateGroupMembershipApproval(String groupId, boolean requiresApproval) {
+        mergeGroupAttribute(groupId, "requiresApproval", String.valueOf(requiresApproval));
+    }
+
+    /** PUT /groups/{id} replaces the whole representation, attributes included - so setting one
+     * attribute has to read the current full set first and only replace that one key, or every
+     * other attribute (e.g. description vs. requiresApproval) would get silently wiped. */
+    private void mergeGroupAttribute(String groupId, String key, String value) {
         KeycloakGroupRepresentation current = restClient.get().uri("/groups/{id}", groupId)
                 .retrieve()
                 .body(KeycloakGroupRepresentation.class);
         if (current == null) {
             throw new TechnicalException("AUTHZ-4012", "Keycloak group not found: " + groupId);
         }
-        Map<String, Object> body = Map.of(
-                "name", current.name(),
-                "attributes", Map.of("description", List.of(description == null ? "" : description))
-        );
+        Map<String, List<String>> attributes = new HashMap<>(current.attributes() != null ? current.attributes() : Map.of());
+        attributes.put(key, List.of(value));
+        Map<String, Object> body = Map.of("name", current.name(), "attributes", attributes);
         restClient.put().uri("/groups/{id}", groupId)
                 .body(body)
                 .retrieve()
@@ -475,14 +509,20 @@ public class KeycloakAdminClientImpl implements KeycloakAdminClient {
     }
 
     private KeycloakGroup toGroup(KeycloakGroupRepresentation representation) {
-        String description = null;
-        if (representation.attributes() != null) {
-            List<String> values = representation.attributes().get("description");
-            if (values != null && !values.isEmpty()) {
-                description = values.get(0);
-            }
+        String description = firstAttributeValue(representation, "description");
+        // Absent means "not yet configured" - defaults to the safe/locked-down choice, same
+        // reasoning as role_state.scope defaulting to NONE.
+        String requiresApproval = firstAttributeValue(representation, "requiresApproval");
+        return new KeycloakGroup(representation.id(), representation.name(), description,
+                requiresApproval == null || Boolean.parseBoolean(requiresApproval));
+    }
+
+    private String firstAttributeValue(KeycloakGroupRepresentation representation, String key) {
+        if (representation.attributes() == null) {
+            return null;
         }
-        return new KeycloakGroup(representation.id(), representation.name(), description);
+        List<String> values = representation.attributes().get(key);
+        return (values == null || values.isEmpty()) ? null : values.get(0);
     }
 
     /** Raw shape of Keycloak's GroupRepresentation - only the fields this app reads. Kept private

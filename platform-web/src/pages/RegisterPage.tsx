@@ -1,12 +1,16 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { register } from '../api/authApi';
+import { register, fetchOrganizationName } from '../api/authApi';
 import { ApiError } from '../api/client';
 
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const joinOrganizationId = searchParams.get('joinOrganization');
+  const [joinOrganizationName, setJoinOrganizationName] = useState<string | null>(null);
+  const [joinOrganizationError, setJoinOrganizationError] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -18,6 +22,13 @@ export function RegisterPage() {
   const [organizationName, setOrganizationName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!joinOrganizationId) return;
+    fetchOrganizationName(joinOrganizationId)
+      .then((res) => setJoinOrganizationName(res.name))
+      .catch(() => setJoinOrganizationError(true));
+  }, [joinOrganizationId]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -32,7 +43,8 @@ export function RegisterPage() {
         firstName,
         lastName,
         termsAccepted,
-        organizationName: createOrganization ? organizationName : undefined,
+        organizationName: !joinOrganizationId && createOrganization ? organizationName : undefined,
+        joinOrganizationId: joinOrganizationId ?? undefined,
       });
       navigate('/login', { replace: true });
     } catch (e) {
@@ -71,24 +83,34 @@ export function RegisterPage() {
           {t('register.confirmPassword')}
           <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
         </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={createOrganization}
-            onChange={(e) => setCreateOrganization(e.target.checked)}
-          />
-          {t('register.createOrganization')}
-        </label>
-        {createOrganization && (
-          <label>
-            {t('register.organizationName')}
-            <input
-              type="text"
-              value={organizationName}
-              onChange={(e) => setOrganizationName(e.target.value)}
-              required
-            />
-          </label>
+        {joinOrganizationId ? (
+          <p>
+            {joinOrganizationError
+              ? t('register.joiningOrganizationError')
+              : t('register.joiningOrganization', { name: joinOrganizationName ?? '...' })}
+          </p>
+        ) : (
+          <>
+            <label>
+              <input
+                type="checkbox"
+                checked={createOrganization}
+                onChange={(e) => setCreateOrganization(e.target.checked)}
+              />
+              {t('register.createOrganization')}
+            </label>
+            {createOrganization && (
+              <label>
+                {t('register.organizationName')}
+                <input
+                  type="text"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  required
+                />
+              </label>
+            )}
+          </>
         )}
         <label>
           <input
@@ -98,7 +120,7 @@ export function RegisterPage() {
           />
           {t('register.termsAccepted')}
         </label>
-        <button type="submit" disabled={submitting}>{t('register.submit')}</button>
+        <button type="submit" disabled={submitting || joinOrganizationError}>{t('register.submit')}</button>
       </form>
     </div>
   );

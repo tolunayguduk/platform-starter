@@ -97,9 +97,17 @@ public interface KeycloakAdminClient {
      * duplicate username (HTTP 409 from Keycloak). */
     KeycloakGroup createGroup(String name);
 
-    /** The only group field this app ever edits - stored as a Keycloak group attribute (Groups
-     * have no native description field the way Roles do). */
+    /** A single organization by id - throws a clean business error if it doesn't exist (a
+     * self-service join request can be given an arbitrary/garbage id by whoever pasted it). */
+    KeycloakGroup getGroup(String groupId);
+
+    /** Stored as a Keycloak group attribute (Groups have no native description field the way
+     * Roles do). */
     void updateGroupDescription(String groupId, String description);
+
+    /** Whether a user self-requesting to join this organization needs a manager's approval, or
+     * becomes a member immediately - see MembershipRequestType.JOIN_REQUEST. */
+    void updateGroupMembershipApproval(String groupId, boolean requiresApproval);
 
     /** Deletes the organization entirely. Member users are simply no longer members of anything -
      * they are never deleted or otherwise touched. */

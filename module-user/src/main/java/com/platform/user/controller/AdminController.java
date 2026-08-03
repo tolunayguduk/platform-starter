@@ -82,30 +82,35 @@ public interface AdminController {
     void updateUserRoles(@PathVariable String id, @RequestBody UpdateUserRolesRequestDto request,
                           @AuthenticationPrincipal Jwt jwt);
 
-    /** Username/email edit - routed straight through to Keycloak, never persisted locally. */
+    /** Username/email edit - routed straight through to Keycloak, never persisted locally.
+     * PLATFORM-scope only. */
     @PutMapping("/users/{id}/identity")
-    void updateUserIdentity(@PathVariable String id, @RequestBody UpdateUserIdentityRequestDto request);
+    void updateUserIdentity(@PathVariable String id, @RequestBody UpdateUserIdentityRequestDto request, @AuthenticationPrincipal Jwt jwt);
 
     /** Enable/disable the account - a disabled user cannot obtain a token from Keycloak. */
     @PutMapping("/users/{id}/status")
     void updateUserStatus(@PathVariable String id, @RequestBody UpdateUserStatusRequestDto request,
                            @AuthenticationPrincipal Jwt jwt);
 
-    /** This user's audit trail, sourced from Keycloak's own admin event log. */
+    /** This user's audit trail, sourced from Keycloak's own admin event log - PLATFORM-scope only. */
     @GetMapping("/users/{id}/audit")
-    List<AdminUserAuditEventDto> getUserAuditEvents(@PathVariable String id);
+    List<AdminUserAuditEventDto> getUserAuditEvents(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
 
-    /** Realm-wide recent activity feed (not scoped to one user) - same admin event log. */
+    /** Recent activity feed, same admin event log as getUserAuditEvents - PLATFORM-scope callers
+     * see realm-wide activity, ORGANIZATION-scope callers only activity about their own
+     * organization's users. */
     @GetMapping("/activity")
-    List<AdminUserAuditEventDto> getRecentActivity(@RequestParam(defaultValue = "20") int limit);
+    List<AdminUserAuditEventDto> getRecentActivity(@RequestParam(defaultValue = "20") int limit, @AuthenticationPrincipal Jwt jwt);
 
     /** e.g. { "report:list": "ENABLED", "billing:refund": "HIDDEN" } for this user's current
      * roles - the same computation /api/me/ui-permissions does for the caller, run for someone else. */
     @GetMapping("/users/{id}/ui-permissions")
     Map<String, String> getUserUiPermissions(@PathVariable String id);
 
+    /** Registration counts/trend - PLATFORM-scope callers see realm-wide totals, ORGANIZATION-scope
+     * callers only their own organization's registrations. */
     @GetMapping("/stats/registrations")
-    List<RegistrationStatsPointDto> registrationStats(@RequestParam StatsRange range);
+    List<RegistrationStatsPointDto> registrationStats(@RequestParam StatsRange range, @AuthenticationPrincipal Jwt jwt);
 
     /** Raw MySQL "main tables" (GDPR categories + permission matrix) the DB browser can list. */
     @GetMapping("/tables")
@@ -114,9 +119,10 @@ public interface AdminController {
     @GetMapping("/tables/{key}/rows")
     AdminTableRowsDto getTableRows(@PathVariable AdminTableKey key);
 
-    /** A single row's Envers audit history, keyed by that table's primary key value. */
+    /** A single row's Envers audit history, keyed by that table's primary key value -
+     * PLATFORM-scope only. */
     @GetMapping("/tables/{key}/rows/{pk}/audit")
-    AdminAuditRowsDto getAuditRows(@PathVariable AdminTableKey key, @PathVariable String pk);
+    AdminAuditRowsDto getAuditRows(@PathVariable AdminTableKey key, @PathVariable String pk, @AuthenticationPrincipal Jwt jwt);
 
     /** Main-table rows only - never targets an audit table (there is no AdminTableKey for one).
      * Writing to PERMISSION or ROLE_PERMISSION is PLATFORM-scope only. */

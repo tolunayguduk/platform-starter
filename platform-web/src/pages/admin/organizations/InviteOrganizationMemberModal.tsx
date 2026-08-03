@@ -3,21 +3,22 @@ import { Alert, App, Button, Descriptions, Input, Modal, Space } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
 import { ApiError } from '../../../api/client';
-import { addOrganizationMember, findUserByIdentifier } from '../../../api/adminApi';
+import { inviteOrganizationMember, findUserByIdentifier } from '../../../api/adminApi';
 import type { AdminUser } from '../../../types/admin';
 
-interface AddOrganizationMemberModalProps {
+interface InviteOrganizationMemberModalProps {
   open: boolean;
   organizationId: string;
   existingMemberIds: Set<string>;
   onClose: () => void;
-  onAdded: () => void;
+  onInvited: () => void;
 }
 
 /** Exact username/email lookup only, never a browse/search - see AdminOrganizationService on the
  * backend for why (an organization admin must never be able to see the full user directory,
- * that would defeat the whole point of isolating organizations from each other). */
-export function AddOrganizationMemberModal({ open, organizationId, existingMemberIds, onClose, onAdded }: AddOrganizationMemberModalProps) {
+ * that would defeat the whole point of isolating organizations from each other). Sends a pending
+ * invite - the target user must accept it themselves before they become a member. */
+export function InviteOrganizationMemberModal({ open, organizationId, existingMemberIds, onClose, onInvited }: InviteOrganizationMemberModalProps) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
@@ -25,7 +26,7 @@ export function AddOrganizationMemberModal({ open, organizationId, existingMembe
   const [found, setFound] = useState<AdminUser | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   function handleClose() {
     setIdentifier('');
@@ -44,41 +45,41 @@ export function AddOrganizationMemberModal({ open, organizationId, existingMembe
       setFound(user);
     } catch (e) {
       setSearchError(
-        e instanceof ApiError ? (e.body?.message ?? t('admin.organizations.addMember.notFound')) : t('admin.organizations.addMember.notFound'),
+        e instanceof ApiError ? (e.body?.message ?? t('admin.organizations.invite.notFound')) : t('admin.organizations.invite.notFound'),
       );
     } finally {
       setSearching(false);
     }
   }
 
-  async function handleAdd() {
+  async function handleInvite() {
     if (!accessToken || !found) return;
-    setAdding(true);
+    setInviting(true);
     try {
-      await addOrganizationMember(accessToken, organizationId, found.id);
-      message.success(t('admin.organizations.memberAdded'));
+      await inviteOrganizationMember(accessToken, organizationId, found.id);
+      message.success(t('admin.organizations.inviteSent'));
       handleClose();
-      onAdded();
+      onInvited();
     } catch (e) {
       message.error(e instanceof ApiError ? (e.body?.message ?? t('admin.organizations.error')) : t('admin.organizations.error'));
     } finally {
-      setAdding(false);
+      setInviting(false);
     }
   }
 
   const alreadyMember = found !== null && existingMemberIds.has(found.id);
 
   return (
-    <Modal open={open} title={t('admin.organizations.addMember.title')} onCancel={handleClose} footer={null} destroyOnHidden>
+    <Modal open={open} title={t('admin.organizations.invite.title')} onCancel={handleClose} footer={null} destroyOnHidden>
       <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
         <Input
-          placeholder={t('admin.organizations.addMember.placeholder')}
+          placeholder={t('admin.organizations.invite.placeholder')}
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           onPressEnter={handleSearch}
         />
         <Button onClick={handleSearch} loading={searching}>
-          {t('admin.organizations.addMember.searchButton')}
+          {t('admin.organizations.invite.searchButton')}
         </Button>
       </Space.Compact>
       {searchError && <Alert type="error" message={searchError} style={{ marginBottom: 16 }} />}
@@ -88,8 +89,8 @@ export function AddOrganizationMemberModal({ open, organizationId, existingMembe
             <Descriptions.Item label={t('admin.column.username')}>{found.username}</Descriptions.Item>
             <Descriptions.Item label={t('admin.column.email')}>{found.email}</Descriptions.Item>
           </Descriptions>
-          <Button type="primary" block disabled={alreadyMember} loading={adding} onClick={handleAdd}>
-            {alreadyMember ? t('admin.organizations.addMember.alreadyMember') : t('admin.organizations.addMember.confirmButton')}
+          <Button type="primary" block disabled={alreadyMember} loading={inviting} onClick={handleInvite}>
+            {alreadyMember ? t('admin.organizations.invite.alreadyMember') : t('admin.organizations.invite.confirmButton')}
           </Button>
         </>
       )}

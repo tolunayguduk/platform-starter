@@ -1,6 +1,7 @@
 package com.platform.app.controller;
 
 import com.platform.app.controller.model.LoginRequestDto;
+import com.platform.app.controller.model.OrganizationNameDto;
 import com.platform.app.controller.model.RefreshRequestDto;
 import com.platform.app.controller.model.RegisterRequestDto;
 import com.platform.app.controller.model.TokenResponseDto;
@@ -45,5 +46,10 @@ public class AuthControllerImpl implements AuthController {
     @Override
     public void register(RegisterRequestDto request, HttpServletRequest servletRequest) {
         registrationService.register(registrationMapper.toCommand(request, servletRequest.getRemoteAddr()));
+    }
+
+    @Override
+    public OrganizationNameDto getOrganizationName(String id) {
+        return new OrganizationNameDto(authService.getOrganizationName(id));
     }
 }

@@ -26,6 +26,8 @@
     "confirmPassword": "Şifre (Tekrar)",
     "createOrganization": "Bir organizasyon oluşturmak istiyorum",
     "organizationName": "Organizasyon Adı",
+    "joiningOrganization": "Katılıyorsunuz: {{name}}",
+    "joiningOrganizationError": "Bu davet linki geçersiz - organizasyon bulunamadı.",
     "termsAccepted": "Kullanım şartlarını kabul ediyorum",
     "submit": "Kayıt Ol",
     "errorFailed": "Kayıt başarısız.",
@@ -40,7 +42,15 @@
     "actions": "İşlemler",
     "listReports": "Raporları Listele",
     "approveReport": "Raporu Onayla",
-    "refund": "İade Et"
+    "refund": "İade Et",
+    "invites": {
+      "title": "Bekleyen Organizasyon Davetleri",
+      "item": "{{organization}} organizasyonuna davet edildiniz.",
+      "accept": "Kabul Et",
+      "decline": "Reddet",
+      "accepted": "{{organization}} organizasyonuna katıldınız.",
+      "error": "Davet güncellenemedi."
+    }
   },
   "profile": {
     "title": "Profil",
@@ -74,7 +84,14 @@
     "confirmNewPassword": "Yeni Şifre (Tekrar)",
     "changePassword": "Şifreyi Güncelle",
     "passwordSuccess": "Şifre başarıyla güncellendi.",
-    "passwordError": "Şifre güncellenemedi."
+    "passwordError": "Şifre güncellenemedi.",
+    "organizationSection": "Bir Organizasyona Katıl",
+    "organizationSectionHint": "Katılmak istediğiniz organizasyonun davet linkindeki kimliğini veya kodunu girin. Organizasyonun ayarına göre hemen üye olabilir ya da yönetici onayı beklenebilir.",
+    "organizationIdPlaceholder": "Organizasyon kimliği",
+    "organizationJoinButton": "Katılım Talep Et",
+    "organizationJoined": "Organizasyona katıldınız.",
+    "organizationJoinPending": "Katılım talebi gönderildi - yönetici onayı bekleniyor.",
+    "organizationJoinError": "Katılım talebi gönderilemedi."
   },
   "settings": {
     "title": "Ayarlar",
@@ -231,19 +248,49 @@
         "success": "Organizasyon oluşturuldu.",
         "error": "Organizasyon oluşturulamadı."
       },
-      "addMember": {
-        "button": "Üye Ekle",
-        "title": "Üye ekle",
+      "tabs": {
+        "members": "Üyeler",
+        "pendingRequests": "Bekleyen Talepler",
+        "settings": "Ayarlar"
+      },
+      "invite": {
+        "button": "Üye Davet Et",
+        "title": "Üye davet et",
         "placeholder": "Tam kullanıcı adı veya e-posta",
         "searchButton": "Ara",
         "notFound": "Bu kullanıcı adı veya e-postayla eşleşen kullanıcı yok.",
         "alreadyMember": "Zaten üye",
-        "confirmButton": "Organizasyona ekle"
+        "confirmButton": "Davet gönder"
       },
-      "memberAdded": "Üye eklendi.",
+      "inviteSent": "Davet gönderildi - kullanıcının onayı bekleniyor.",
       "memberRemoved": "Üye çıkarıldı.",
       "confirmRemoveMember": "Bu üye organizasyondan çıkarılsın mı?",
-      "removeMemberAction": "Çıkar"
+      "removeMemberAction": "Çıkar",
+      "pendingRequests": {
+        "empty": "Bekleyen katılım talebi yok.",
+        "column": {
+          "requestedAt": "Talep Tarihi"
+        },
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "confirmReject": "Bu katılım talebi reddedilsin mi?",
+        "approved": "Katılım talebi onaylandı.",
+        "rejected": "Katılım talebi reddedildi.",
+        "error": "Katılım talebi güncellenemedi."
+      },
+      "settings": {
+        "requiresApprovalLabel": "Katılım için yönetici onayı gerektir",
+        "requiresApprovalHint": "Açıkken, aşağıdaki davet linkini kullanan biri ancak bir yönetici talebini onayladıktan sonra üye olur. Kapalıyken hemen üye olur.",
+        "updated": "Ayar güncellendi.",
+        "updateError": "Ayar güncellenemedi.",
+        "inviteLinkLabel": "Davet linki",
+        "inviteLinkHint": "Bu link süresizdir. Bu link üzerinden kayıt olan herkes yukarıdaki ayara bağlı olarak bu organizasyona katılım talep eder.",
+        "copyLink": "Kopyala",
+        "linkCopied": "Link panoya kopyalandı."
+      }
+    },
+    "scopeNotice": {
+      "organization": "Yalnızca kendi organizasyonunuza ait verileri görüntülüyorsunuz. Platform yöneticisi tüm organizasyonları görür."
     },
     "registrationsTitle": "Kayıt Olan Kullanıcılar",
     "registrationsTotalFor": "{{period}} içinde toplam kayıt",
@@ -318,6 +365,7 @@
       "selfRoleHint": "Kendi ADMIN rolünüzü kaldıramazsınız.",
       "roleDisabledLabel": "{{role}} (devre dışı)",
       "rolePlatformOnlyLabel": "{{role}} (sadece platform admini)",
+      "identityPlatformOnly": "Kullanıcı adı ve e-posta yalnızca kullanıcının kendisi veya bir platform yöneticisi tarafından değiştirilebilir.",
       "success": "Kullanıcı güncellendi.",
       "error": "Kullanıcı güncellenemedi."
     },

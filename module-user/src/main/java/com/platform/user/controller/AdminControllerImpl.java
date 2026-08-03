@@ -90,8 +90,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public void updateUserIdentity(String id, UpdateUserIdentityRequestDto request) {
-        adminUserService.updateUserIdentity(new UpdateUserIdentityCommand(id, request.username(), request.email()));
+    public void updateUserIdentity(String id, UpdateUserIdentityRequestDto request, Jwt jwt) {
+        adminUserService.updateUserIdentity(new UpdateUserIdentityCommand(id, request.username(), request.email(), jwt.getSubject()));
     }
 
     @Override
@@ -100,13 +100,13 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public List<AdminUserAuditEventDto> getUserAuditEvents(String id) {
-        return adminUserMapper.toAuditEventDtoList(adminUserService.getUserAuditEvents(id));
+    public List<AdminUserAuditEventDto> getUserAuditEvents(String id, Jwt jwt) {
+        return adminUserMapper.toAuditEventDtoList(adminUserService.getUserAuditEvents(id, jwt.getSubject()));
     }
 
     @Override
-    public List<AdminUserAuditEventDto> getRecentActivity(int limit) {
-        return adminUserMapper.toAuditEventDtoList(adminUserService.getRecentActivity(limit));
+    public List<AdminUserAuditEventDto> getRecentActivity(int limit, Jwt jwt) {
+        return adminUserMapper.toAuditEventDtoList(adminUserService.getRecentActivity(limit, jwt.getSubject()));
     }
 
     @Override
@@ -115,8 +115,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public List<RegistrationStatsPointDto> registrationStats(StatsRange range) {
-        return adminUserMapper.toStatsDtoList(adminUserService.getRegistrationStats(range));
+    public List<RegistrationStatsPointDto> registrationStats(StatsRange range, Jwt jwt) {
+        return adminUserMapper.toStatsDtoList(adminUserService.getRegistrationStats(range, jwt.getSubject()));
     }
 
     @Override
@@ -130,8 +130,8 @@ public class AdminControllerImpl implements AdminController {
     }
 
     @Override
-    public AdminAuditRowsDto getAuditRows(AdminTableKey key, String pk) {
-        return adminTableMapper.toDto(adminTableService.getAuditRows(key, pk));
+    public AdminAuditRowsDto getAuditRows(AdminTableKey key, String pk, Jwt jwt) {
+        return adminTableMapper.toDto(adminTableService.getAuditRows(key, pk, jwt.getSubject()));
     }
 
     @Override

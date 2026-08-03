@@ -20,7 +20,9 @@ public interface AdminTableService {
 
     AdminTableRowsResult getRows(AdminTableKey key);
 
-    AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue);
+    /** PLATFORM-scope only - a manager manages their organization's users/membership, but never
+     * gets to see the change history behind it (audit trails on GDPR/role-grant tables alike). */
+    AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue, String callerKeycloakUserId);
 
     /** Applies only the fields present in {@code changes} (partial update) - every other column
      * is left untouched. Rejects any column not in that table's editable set. Writing to

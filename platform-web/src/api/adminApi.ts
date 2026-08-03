@@ -1,6 +1,6 @@
 import { apiFetch } from './client';
 import type { AdminTable, AdminTableRows, AdminAuditRows, AdminUserAuditEvent, StatsRange, RegistrationStatsPoint } from '../types/admin';
-import type { AdminRole, AdminUser, Organization, RoleScope } from '../types/admin';
+import type { AdminRole, AdminUser, Organization, OrganizationMembershipRequest, RoleScope } from '../types/admin';
 
 export function fetchAdminUsers(accessToken: string): Promise<AdminUser[]> {
   return apiFetch<AdminUser[]>('/api/admin/users', { accessToken });
@@ -85,9 +85,36 @@ export function findUserByIdentifier(accessToken: string, identifier: string): P
   return apiFetch<AdminUser>(`/api/admin/organizations/user-lookup?identifier=${encodeURIComponent(identifier)}`, { accessToken });
 }
 
-export function addOrganizationMember(accessToken: string, organizationId: string, userId: string): Promise<void> {
-  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`, {
+/** Creates a pending invite - does NOT grant membership until the target user accepts it. */
+export function inviteOrganizationMember(accessToken: string, organizationId: string, userId: string): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/invites/${encodeURIComponent(userId)}`, {
     method: 'PUT',
+    accessToken,
+  });
+}
+
+export function updateMembershipApproval(accessToken: string, organizationId: string, requiresApproval: boolean): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/membership-approval`, {
+    method: 'PUT',
+    body: { requiresApproval },
+    accessToken,
+  });
+}
+
+export function fetchPendingJoinRequests(accessToken: string, organizationId: string): Promise<OrganizationMembershipRequest[]> {
+  return apiFetch<OrganizationMembershipRequest[]>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/join-requests`, { accessToken });
+}
+
+export function approveJoinRequest(accessToken: string, organizationId: string, requestId: number): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/join-requests/${requestId}/approve`, {
+    method: 'POST',
+    accessToken,
+  });
+}
+
+export function rejectJoinRequest(accessToken: string, organizationId: string, requestId: number): Promise<void> {
+  return apiFetch<void>(`/api/admin/organizations/${encodeURIComponent(organizationId)}/join-requests/${requestId}/reject`, {
+    method: 'POST',
     accessToken,
   });
 }

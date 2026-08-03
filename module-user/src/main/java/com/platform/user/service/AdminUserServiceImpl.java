@@ -7,10 +7,13 @@ import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
 import com.platform.security.integration.keycloak.model.RealmRole;
+import com.platform.user.constant.MembershipRequestStatus;
 import com.platform.user.constant.RoleScope;
 import com.platform.user.constant.StatsRange;
+import com.platform.user.entity.OrganizationMembershipRequest;
 import com.platform.user.entity.RoleState;
 import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.OrganizationMembershipRequestRepository;
 import com.platform.user.repository.RolePermissionRepository;
 import com.platform.user.repository.RoleStateRepository;
 import com.platform.user.repository.UserProfileRepository;
@@ -35,6 +38,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -42,17 +46,24 @@ import java.util.stream.Collectors;
 @Service
 public class AdminUserServiceImpl implements AdminUserService {
 
+    /** Keycloak's admin-event log is fetched (and capped) realm-wide - scanning this many of the
+     * most recent events before filtering to an organization keeps the feed from going sparse just
+     * because platform-wide activity from other organizations happened to be more recent. */
+    private static final int RECENT_ACTIVITY_SCAN_WINDOW = 200;
+
     private final UserProfileRepository userProfileRepository;
     private final KeycloakAdminClient keycloakAdminClient;
     private final UiPermissionsService uiPermissionsService;
     private final RolePermissionRepository rolePermissionRepository;
     private final RoleStateRepository roleStateRepository;
     private final AdminAccessScopeService adminAccessScopeService;
+    private final OrganizationMembershipRequestRepository organizationMembershipRequestRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public AdminUserServiceImpl(UserProfileRepository userProfileRepository, KeycloakAdminClient keycloakAdminClient,
                                  UiPermissionsService uiPermissionsService, RolePermissionRepository rolePermissionRepository,
                                  RoleStateRepository roleStateRepository, AdminAccessScopeService adminAccessScopeService,
+                                 OrganizationMembershipRequestRepository organizationMembershipRequestRepository,
                                  ApplicationEventPublisher eventPublisher) {
         this.userProfileRepository = userProfileRepository;
         this.keycloakAdminClient = keycloakAdminClient;
@@ -60,6 +71,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         this.rolePermissionRepository = rolePermissionRepository;
         this.roleStateRepository = roleStateRepository;
         this.adminAccessScopeService = adminAccessScopeService;
+        this.organizationMembershipRequestRepository = organizationMembershipRequestRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -77,9 +89,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         List<KeycloakUserSummary> users = keycloakAdminClient.listUsers();
         if (!callerScope.platformScoped()) {
-            Set<String> visibleUserIds = callerScope.organizationGroupIds().stream()
-                    .flatMap(groupId -> keycloakAdminClient.getGroupMembers(groupId).stream().map(KeycloakUserId::id))
-                    .collect(Collectors.toSet());
+            Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
             users = users.stream().filter(u -> visibleUserIds.contains(u.id())).toList();
         }
 
@@ -205,6 +215,18 @@ public class AdminUserServiceImpl implements AdminUserService {
                 throw new BusinessException("USER-4008", "error.admin.platform_role_assignment_denied",
                         "Cannot assign platform-scope role(s): " + platformRolesBeingAssigned);
             }
+            // Symmetric with the assignment guard above - an org-scoped caller must never touch a
+            // platform-scope role's membership for anyone, including stripping it off a target user
+            // who happens to share an organization with them.
+            Set<String> removedRoles = currentRoles.stream().filter(role -> !command.roles().contains(role)).collect(Collectors.toSet());
+            Set<String> platformRolesBeingRemoved = roleStateRepository.findByRoleNameIn(removedRoles).stream()
+                    .filter(rs -> rs.getScope() == RoleScope.PLATFORM)
+                    .map(RoleState::getRoleName)
+                    .collect(Collectors.toSet());
+            if (!platformRolesBeingRemoved.isEmpty()) {
+                throw new BusinessException("USER-4008", "error.admin.platform_role_assignment_denied",
+                        "Cannot remove platform-scope role(s): " + platformRolesBeingRemoved);
+            }
         }
 
         for (String role : command.roles()) {
@@ -235,6 +257,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     @Override
     public void updateUserIdentity(UpdateUserIdentityCommand command) {
+        requirePlatformScope(command.callerKeycloakUserId());
         if (isBlank(command.username()) || isBlank(command.email())) {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Required field missing");
         }
@@ -255,7 +278,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId) {
+    public List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId, String callerKeycloakUserId) {
+        requirePlatformScope(callerKeycloakUserId);
         List<AdminEvent> events = keycloakAdminClient.getUserAdminEvents(keycloakUserId);
         return events.stream()
                 .map(e -> new AdminUserAuditEventResult(
@@ -264,24 +288,73 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
-    public List<AdminUserAuditEventResult> getRecentActivity(int limit) {
-        List<AdminEvent> events = keycloakAdminClient.getRecentAdminEvents(limit);
+    public List<AdminUserAuditEventResult> getRecentActivity(int limit, String callerKeycloakUserId) {
+        AdminAccessScope callerScope = adminAccessScopeService.resolve(callerKeycloakUserId);
+        // Always scan the widest available window before limiting - if we asked Keycloak for just
+        // `limit` events up front and then filtered down to the caller's organization, platform-wide
+        // noise could crowd out older-but-still-relevant events before the org filter ever saw them.
+        List<AdminEvent> events = keycloakAdminClient.getRecentAdminEvents(RECENT_ACTIVITY_SCAN_WINDOW);
+        if (!callerScope.platformScoped()) {
+            Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
+            events = events.stream()
+                    .filter(e -> e.resourcePath() != null
+                            && visibleUserIds.stream().anyMatch(id -> e.resourcePath().startsWith("users/" + id)))
+                    .toList();
+        }
         return events.stream()
+                .limit(limit)
                 .map(e -> new AdminUserAuditEventResult(
                         Instant.ofEpochMilli(e.time()), e.operationType(), e.resourcePath(), e.representation()))
                 .toList();
     }
 
     @Override
-    public List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range) {
-        List<KeycloakUserSummary> users = keycloakAdminClient.listUsers();
+    public List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range, String callerKeycloakUserId) {
+        AdminAccessScope callerScope = adminAccessScopeService.resolve(callerKeycloakUserId);
+        List<KeycloakUserSummary> allUsers = keycloakAdminClient.listUsers();
+
+        // Each organization is effectively its own "platform" for its manager - "registrations"
+        // for an ORGANIZATION-scope caller means users who joined THIS organization, not users who
+        // created a Keycloak account somewhere in the realm (which is what a PLATFORM-scope caller
+        // sees, and is the only timestamp Keycloak itself tracks). A user's account may well
+        // predate when they actually joined this particular organization.
+        List<Instant> timestamps = callerScope.platformScoped()
+                ? allUsers.stream().map(u -> Instant.ofEpochMilli(u.createdTimestamp())).toList()
+                : resolveOrganizationJoinTimestamps(callerScope, allUsers);
+
         ZoneId zone = ZoneId.systemDefault();
         return switch (range) {
-            case DAY -> bucketByHour(users, zone);
-            case WEEK -> bucketByDay(users, 7, zone);
-            case MONTH -> bucketByDay(users, 30, zone);
-            case YEAR -> bucketByMonth(users, zone);
+            case DAY -> bucketByHour(timestamps, zone);
+            case WEEK -> bucketByDay(timestamps, 7, zone);
+            case MONTH -> bucketByDay(timestamps, 30, zone);
+            case YEAR -> bucketByMonth(timestamps, zone);
         };
+    }
+
+    /** When each currently-visible user joined the caller's organization(s) - the resolution time
+     * of their accepted INVITE or approved JOIN_REQUEST (see OrganizationMembershipRequest). Falls
+     * back to the user's own Keycloak account creation time for members with no such row: the
+     * organization's creator (added as its first member directly, never through a request) and any
+     * membership granted outside the invite/join-request flow (e.g. by direct admin action). */
+    private List<Instant> resolveOrganizationJoinTimestamps(AdminAccessScope callerScope, List<KeycloakUserSummary> allUsers) {
+        Set<String> visibleUserIds = resolveVisibleUserIds(callerScope);
+        Map<String, Instant> accountCreatedAt = allUsers.stream()
+                .collect(Collectors.toMap(KeycloakUserSummary::id, u -> Instant.ofEpochMilli(u.createdTimestamp())));
+
+        Map<String, Instant> joinedAtByUserId = new HashMap<>();
+        for (OrganizationMembershipRequest request : organizationMembershipRequestRepository
+                .findByOrganizationIdInAndStatus(callerScope.organizationGroupIds(), MembershipRequestStatus.APPROVED)) {
+            if (request.getResolvedAt() == null) {
+                continue;
+            }
+            joinedAtByUserId.merge(request.getKeycloakUserId(), request.getResolvedAt(),
+                    (existing, candidate) -> candidate.isAfter(existing) ? candidate : existing);
+        }
+
+        return visibleUserIds.stream()
+                .map(userId -> joinedAtByUserId.getOrDefault(userId, accountCreatedAt.get(userId)))
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     /** Guards deleteRole/updateRoleStatus(enabled=false) - Keycloak has no "last admin" safeguard
@@ -309,6 +382,15 @@ public class AdminUserServiceImpl implements AdminUserService {
         }
     }
 
+    /** The Keycloak user ids visible to an organization-scoped caller - members of every
+     * organization they belong to. Shared by listUsers, getRegistrationStats and
+     * getRecentActivity so the three stay consistent with each other. */
+    private Set<String> resolveVisibleUserIds(AdminAccessScope callerScope) {
+        return callerScope.organizationGroupIds().stream()
+                .flatMap(groupId -> keycloakAdminClient.getGroupMembers(groupId).stream().map(KeycloakUserId::id))
+                .collect(Collectors.toSet());
+    }
+
     private void assertSharesOrganization(AdminAccessScope callerScope, String targetKeycloakUserId) {
         Set<String> targetGroupIds = keycloakAdminClient.getUserGroups(targetKeycloakUserId).stream()
                 .map(KeycloakGroup::id)
@@ -328,26 +410,28 @@ public class AdminUserServiceImpl implements AdminUserService {
         });
     }
 
-    private List<RegistrationStatsPointResult> bucketByHour(List<KeycloakUserSummary> users, ZoneId zone) {
-        ZonedDateTime nowBucket = ZonedDateTime.now(zone).truncatedTo(ChronoUnit.HOURS);
-        ZonedDateTime start = nowBucket.minusHours(23);
+    /** "DAY" means the current calendar day (local midnight through now), not a rolling 24-hour
+     * window - otherwise the displayed total silently depends on what hour it currently is (e.g.
+     * at 01:00 a rolling window would still be showing mostly yesterday's registrations). */
+    private List<RegistrationStatsPointResult> bucketByHour(List<Instant> timestamps, ZoneId zone) {
+        ZonedDateTime start = ZonedDateTime.now(zone).truncatedTo(ChronoUnit.DAYS);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:00");
 
         LinkedHashMap<String, Long> counts = new LinkedHashMap<>();
         for (int i = 0; i < 24; i++) {
             counts.put(fmt.format(start.plusHours(i)), 0L);
         }
-        for (KeycloakUserSummary user : users) {
-            ZonedDateTime created = Instant.ofEpochMilli(user.createdTimestamp()).atZone(zone).truncatedTo(ChronoUnit.HOURS);
-            if (created.isBefore(start)) {
+        for (Instant timestamp : timestamps) {
+            ZonedDateTime bucketTime = timestamp.atZone(zone).truncatedTo(ChronoUnit.HOURS);
+            if (bucketTime.isBefore(start)) {
                 continue;
             }
-            counts.merge(fmt.format(created), 1L, Long::sum);
+            counts.merge(fmt.format(bucketTime), 1L, Long::sum);
         }
         return toPoints(counts);
     }
 
-    private List<RegistrationStatsPointResult> bucketByDay(List<KeycloakUserSummary> users, int days, ZoneId zone) {
+    private List<RegistrationStatsPointResult> bucketByDay(List<Instant> timestamps, int days, ZoneId zone) {
         ZonedDateTime nowBucket = ZonedDateTime.now(zone).truncatedTo(ChronoUnit.DAYS);
         ZonedDateTime start = nowBucket.minusDays(days - 1L);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
@@ -356,17 +440,17 @@ public class AdminUserServiceImpl implements AdminUserService {
         for (int i = 0; i < days; i++) {
             counts.put(fmt.format(start.plusDays(i)), 0L);
         }
-        for (KeycloakUserSummary user : users) {
-            ZonedDateTime created = Instant.ofEpochMilli(user.createdTimestamp()).atZone(zone).truncatedTo(ChronoUnit.DAYS);
-            if (created.isBefore(start)) {
+        for (Instant timestamp : timestamps) {
+            ZonedDateTime bucketTime = timestamp.atZone(zone).truncatedTo(ChronoUnit.DAYS);
+            if (bucketTime.isBefore(start)) {
                 continue;
             }
-            counts.merge(fmt.format(created), 1L, Long::sum);
+            counts.merge(fmt.format(bucketTime), 1L, Long::sum);
         }
         return toPoints(counts);
     }
 
-    private List<RegistrationStatsPointResult> bucketByMonth(List<KeycloakUserSummary> users, ZoneId zone) {
+    private List<RegistrationStatsPointResult> bucketByMonth(List<Instant> timestamps, ZoneId zone) {
         ZonedDateTime nowBucket = ZonedDateTime.now(zone).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS);
         ZonedDateTime start = nowBucket.minusMonths(11);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM");
@@ -375,13 +459,12 @@ public class AdminUserServiceImpl implements AdminUserService {
         for (int i = 0; i < 12; i++) {
             counts.put(fmt.format(start.plusMonths(i)), 0L);
         }
-        for (KeycloakUserSummary user : users) {
-            ZonedDateTime createdMonth = Instant.ofEpochMilli(user.createdTimestamp())
-                    .atZone(zone).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS);
-            if (createdMonth.isBefore(start)) {
+        for (Instant timestamp : timestamps) {
+            ZonedDateTime bucketMonth = timestamp.atZone(zone).withDayOfMonth(1).truncatedTo(ChronoUnit.DAYS);
+            if (bucketMonth.isBefore(start)) {
                 continue;
             }
-            counts.merge(fmt.format(createdMonth), 1L, Long::sum);
+            counts.merge(fmt.format(bucketMonth), 1L, Long::sum);
         }
         return toPoints(counts);
     }

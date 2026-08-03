@@ -3,6 +3,8 @@ package com.platform.user.controller;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.CreateOrganizationRequestDto;
 import com.platform.user.controller.model.OrganizationDto;
+import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.UpdateMembershipApprovalRequestDto;
 import com.platform.user.controller.model.UpdateOrganizationDescriptionRequestDto;
 import com.platform.user.mapper.AdminOrganizationMapper;
 import com.platform.user.mapper.AdminUserMapper;
@@ -45,6 +47,11 @@ public class AdminOrganizationControllerImpl implements AdminOrganizationControl
     }
 
     @Override
+    public void updateMembershipApprovalSetting(String id, UpdateMembershipApprovalRequestDto request, Jwt jwt) {
+        adminOrganizationService.updateMembershipApprovalSetting(id, request.requiresApproval(), jwt.getSubject());
+    }
+
+    @Override
     public void deleteOrganization(String id, Jwt jwt) {
         adminOrganizationService.deleteOrganization(id, jwt.getSubject());
     }
@@ -60,12 +67,27 @@ public class AdminOrganizationControllerImpl implements AdminOrganizationControl
     }
 
     @Override
-    public void addMember(String id, String userId, Jwt jwt) {
-        adminOrganizationService.addMember(id, userId, jwt.getSubject());
+    public void inviteMember(String id, String userId, Jwt jwt) {
+        adminOrganizationService.inviteMember(id, userId, jwt.getSubject());
     }
 
     @Override
     public void removeMember(String id, String userId, Jwt jwt) {
         adminOrganizationService.removeMember(id, userId, jwt.getSubject());
+    }
+
+    @Override
+    public List<OrganizationMembershipRequestDto> listPendingJoinRequests(String id, Jwt jwt) {
+        return adminOrganizationMapper.toRequestDtoList(adminOrganizationService.listPendingJoinRequests(id, jwt.getSubject()));
+    }
+
+    @Override
+    public void approveJoinRequest(String id, Long requestId, Jwt jwt) {
+        adminOrganizationService.approveJoinRequest(requestId, jwt.getSubject());
+    }
+
+    @Override
+    public void rejectJoinRequest(String id, Long requestId, Jwt jwt) {
+        adminOrganizationService.rejectJoinRequest(requestId, jwt.getSubject());
     }
 }

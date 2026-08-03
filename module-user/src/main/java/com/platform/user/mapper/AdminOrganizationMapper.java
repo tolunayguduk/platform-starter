@@ -1,6 +1,8 @@
 package com.platform.user.mapper;
 
 import com.platform.user.controller.model.OrganizationDto;
+import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.service.model.OrganizationMembershipRequestResult;
 import com.platform.user.service.model.OrganizationResult;
 import org.mapstruct.Mapper;
 
@@ -12,4 +14,8 @@ public interface AdminOrganizationMapper {
     OrganizationDto toDto(OrganizationResult result);
 
     List<OrganizationDto> toDtoList(List<OrganizationResult> results);
+
+    OrganizationMembershipRequestDto toDto(OrganizationMembershipRequestResult result);
+
+    List<OrganizationMembershipRequestDto> toRequestDtoList(List<OrganizationMembershipRequestResult> results);
 }

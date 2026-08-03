@@ -7,7 +7,7 @@ import { ApiError } from '../../../api/client';
 import { deleteOrganization, fetchOrganizations, updateOrganizationDescription } from '../../../api/adminApi';
 import type { Organization } from '../../../types/admin';
 import { AddOrganizationModal } from './AddOrganizationModal';
-import { OrganizationMembersPanel } from './OrganizationMembersPanel';
+import { OrganizationDetailPanel } from './OrganizationDetailPanel';
 
 /** PLATFORM-scoped callers see and manage every organization; ORGANIZATION-scoped callers only
  * their own (a user may belong to more than one) - the backend enforces this independently
@@ -91,7 +91,7 @@ export function OrganizationsTab() {
         pagination={{ pageSize: 10 }}
         scroll={{ x: 'max-content' }}
         expandable={{
-          expandedRowRender: (record) => <OrganizationMembersPanel organizationId={record.id} onMembershipChanged={loadOrganizations} />,
+          expandedRowRender: (record) => <OrganizationDetailPanel organization={record} onOrganizationChanged={loadOrganizations} />,
         }}
         columns={[
           { title: t('admin.organizations.column.name'), dataIndex: 'name', width: 220 },

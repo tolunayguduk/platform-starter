@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { App, Button, Descriptions, Form, Input, Modal, Select, Typography } from 'antd';
+import { App, Button, Descriptions, Form, Input, Modal, Select, Typography, Alert } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../store/AuthContext';
 import { ApiError } from '../../../api/client';
@@ -41,8 +41,10 @@ export function EditUserModal({ open, user, isSelf, availableRoles, callerIsPlat
   function handleReview() {
     const values = form.getFieldsValue();
     const changes: { username?: string; email?: string; roles?: string[] } = {};
-    if (values.username !== user.username) changes.username = values.username;
-    if (values.email !== user.email) changes.email = values.email;
+    if (callerIsPlatformScoped) {
+      if (values.username !== user.username) changes.username = values.username;
+      if (values.email !== user.email) changes.email = values.email;
+    }
     if (!sameRoleSet(values.roles ?? [], user.roles)) changes.roles = values.roles;
     setPendingChanges(changes);
     setMode('confirm');
@@ -105,12 +107,18 @@ export function EditUserModal({ open, user, isSelf, availableRoles, callerIsPlat
           layout="vertical"
           initialValues={{ username: user.username, email: user.email, roles: user.roles }}
         >
-          <Form.Item name="username" label={t('admin.editUser.fields.username')}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="email" label={t('admin.editUser.fields.email')}>
-            <Input />
-          </Form.Item>
+          {callerIsPlatformScoped ? (
+            <>
+              <Form.Item name="username" label={t('admin.editUser.fields.username')}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="email" label={t('admin.editUser.fields.email')}>
+                <Input />
+              </Form.Item>
+            </>
+          ) : (
+            <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('admin.editUser.identityPlatformOnly')} />
+          )}
           <Form.Item
             name="roles"
             label={t('admin.editUser.fields.roles')}

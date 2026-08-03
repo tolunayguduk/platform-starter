@@ -28,3 +28,9 @@ export function register(fields: RegisterFields): Promise<void> {
     body: fields,
   });
 }
+
+/** Public (no token) lookup so the register page can show "You're joining: {name}" for an
+ * invite-link organization id instead of a raw uuid. */
+export function fetchOrganizationName(id: string): Promise<{ name: string }> {
+  return apiFetch<{ name: string }>(`/api/auth/organizations/${encodeURIComponent(id)}/name`);
+}

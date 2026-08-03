@@ -3,6 +3,8 @@ package com.platform.user.controller;
 import com.platform.user.controller.model.AdminUserDto;
 import com.platform.user.controller.model.CreateOrganizationRequestDto;
 import com.platform.user.controller.model.OrganizationDto;
+import com.platform.user.controller.model.OrganizationMembershipRequestDto;
+import com.platform.user.controller.model.UpdateMembershipApprovalRequestDto;
 import com.platform.user.controller.model.UpdateOrganizationDescriptionRequestDto;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -39,6 +41,12 @@ public interface AdminOrganizationController {
     void updateOrganizationDescription(@PathVariable String id, @RequestBody UpdateOrganizationDescriptionRequestDto request,
                                         @AuthenticationPrincipal Jwt jwt);
 
+    /** Whether a self-service join request needs this organization's manager to approve it, or is
+     * granted immediately. PLATFORM: any organization. ORGANIZATION-scope: only their own. */
+    @PutMapping("/{id}/membership-approval")
+    void updateMembershipApprovalSetting(@PathVariable String id, @RequestBody UpdateMembershipApprovalRequestDto request,
+                                          @AuthenticationPrincipal Jwt jwt);
+
     /** PLATFORM-scope only - destructive, no organization self-service delete. */
     @DeleteMapping("/{id}")
     void deleteOrganization(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
@@ -47,16 +55,29 @@ public interface AdminOrganizationController {
     @GetMapping("/{id}/members")
     List<AdminUserDto> getOrganizationMembers(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
 
-    /** Exact username/email lookup only, never a browse/search - backs the "add member" flow so
-     * an organization admin can invite someone without seeing the full user directory. */
+    /** Exact username/email lookup only, never a browse/search - backs the invite flow so an
+     * organization admin can find someone without seeing the full user directory. */
     @GetMapping("/user-lookup")
     AdminUserDto findUserByIdentifier(@RequestParam String identifier, @AuthenticationPrincipal Jwt jwt);
 
-    /** PLATFORM: any organization. ORGANIZATION-scope: only their own. */
-    @PutMapping("/{id}/members/{userId}")
-    void addMember(@PathVariable String id, @PathVariable String userId, @AuthenticationPrincipal Jwt jwt);
+    /** Creates a pending invite - does NOT grant membership. The target user must accept it
+     * themselves (see /api/me/organization-invites). PLATFORM: any organization.
+     * ORGANIZATION-scope: only their own. */
+    @PutMapping("/{id}/invites/{userId}")
+    void inviteMember(@PathVariable String id, @PathVariable String userId, @AuthenticationPrincipal Jwt jwt);
 
-    /** PLATFORM: any organization. ORGANIZATION-scope: only their own. */
+    /** Unilateral - no consent needed to remove, unlike adding. PLATFORM: any organization.
+     * ORGANIZATION-scope: only their own. */
     @DeleteMapping("/{id}/members/{userId}")
     void removeMember(@PathVariable String id, @PathVariable String userId, @AuthenticationPrincipal Jwt jwt);
+
+    /** Pending self-service join requests (not invites) targeting this organization. */
+    @GetMapping("/{id}/join-requests")
+    List<OrganizationMembershipRequestDto> listPendingJoinRequests(@PathVariable String id, @AuthenticationPrincipal Jwt jwt);
+
+    @PostMapping("/{id}/join-requests/{requestId}/approve")
+    void approveJoinRequest(@PathVariable String id, @PathVariable Long requestId, @AuthenticationPrincipal Jwt jwt);
+
+    @PostMapping("/{id}/join-requests/{requestId}/reject")
+    void rejectJoinRequest(@PathVariable String id, @PathVariable Long requestId, @AuthenticationPrincipal Jwt jwt);
 }

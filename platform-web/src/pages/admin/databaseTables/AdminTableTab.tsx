@@ -12,11 +12,15 @@ export function AdminTableTab({
   hasAudit,
   editableColumns,
   filterUserId,
+  readOnly = false,
 }: {
   tableKey: string;
   hasAudit: boolean;
   editableColumns: string[];
   filterUserId: string;
+  /** No edit action at all - e.g. USER_PROFILE for an organization-scope caller, who manages
+   * membership and roles but never a user's identity/profile fields on their behalf. */
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const { accessToken } = useAuth();
@@ -48,15 +52,19 @@ export function AdminTableTab({
 
   const tableColumns = [
     ...buildColumns(columns),
-    {
-      title: t('admin.editRow.actionsColumn'),
-      key: 'actions',
-      render: (_: unknown, record: Record<string, unknown>) => (
-        <Button size="small" onClick={() => setEditingRow(record)}>
-          {t('admin.editRow.editAction')}
-        </Button>
-      ),
-    },
+    ...(readOnly
+      ? []
+      : [
+          {
+            title: t('admin.editRow.actionsColumn'),
+            key: 'actions',
+            render: (_: unknown, record: Record<string, unknown>) => (
+              <Button size="small" onClick={() => setEditingRow(record)}>
+                {t('admin.editRow.editAction')}
+              </Button>
+            ),
+          },
+        ]),
   ];
 
   return (

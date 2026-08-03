@@ -31,15 +31,18 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final KeycloakAdminClient keycloakAdminClient;
     private final UserProfileRepository userProfileRepository;
     private final UserConsentRepository userConsentRepository;
+    private final OrganizationMembershipService organizationMembershipService;
     private final String organizationAdminRole;
 
     public RegistrationServiceImpl(KeycloakAdminClient keycloakAdminClient,
                                     UserProfileRepository userProfileRepository,
                                     UserConsentRepository userConsentRepository,
+                                    OrganizationMembershipService organizationMembershipService,
                                     @Value("${platform.registration.organization-admin-role:MANAGER}") String organizationAdminRole) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.userProfileRepository = userProfileRepository;
         this.userConsentRepository = userConsentRepository;
+        this.organizationMembershipService = organizationMembershipService;
         this.organizationAdminRole = organizationAdminRole;
     }
 
@@ -63,6 +66,8 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
         String organizationName = command.organizationName() == null ? null : command.organizationName().trim();
         boolean creatingOrganization = organizationName != null && !organizationName.isEmpty();
+        String joinOrganizationId = command.joinOrganizationId() == null ? null : command.joinOrganizationId().trim();
+        boolean joiningOrganization = joinOrganizationId != null && !joinOrganizationId.isEmpty();
         String createdGroupId = null;
         try {
             if (creatingOrganization) {
@@ -79,6 +84,13 @@ public class RegistrationServiceImpl implements RegistrationService {
                 // composite it auto-assigns on user creation - USER never actually appears in a
                 // token unless granted directly, so the permission matrix would never match it.
                 keycloakAdminClient.assignRealmRole(keycloakUserId, DEFAULT_ROLE);
+                if (joiningOrganization) {
+                    // Joining isn't creating - always a plain USER, and always goes through the
+                    // same pending/immediate approval logic a post-registration join would (see
+                    // OrganizationMembershipService.requestToJoin). A bad/nonexistent organization
+                    // id surfaces as a clean BusinessException, caught below like everything else.
+                    organizationMembershipService.requestToJoin(joinOrganizationId, keycloakUserId);
+                }
             }
 
             UserProfile profile = new UserProfile();
@@ -138,6 +150,12 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
         if (command.termsAccepted() == null || !command.termsAccepted()) {
             throw new BusinessException("COMMON-4005", "error.register.terms_not_accepted", "Terms of service not accepted");
+        }
+        boolean hasOrganizationName = command.organizationName() != null && !command.organizationName().isBlank();
+        boolean hasJoinOrganizationId = command.joinOrganizationId() != null && !command.joinOrganizationId().isBlank();
+        if (hasOrganizationName && hasJoinOrganizationId) {
+            throw new BusinessException("COMMON-4006", "error.register.organization_conflict",
+                    "Cannot both create a new organization and join an existing one");
         }
     }
 

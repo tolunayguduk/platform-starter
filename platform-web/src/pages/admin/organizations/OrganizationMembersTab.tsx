@@ -5,15 +5,15 @@ import { useAuth } from '../../../store/AuthContext';
 import { ApiError } from '../../../api/client';
 import { fetchOrganizationMembers, removeOrganizationMember } from '../../../api/adminApi';
 import type { AdminUser } from '../../../types/admin';
-import { AddOrganizationMemberModal } from './AddOrganizationMemberModal';
+import { InviteOrganizationMemberModal } from './InviteOrganizationMemberModal';
 
-export function OrganizationMembersPanel({ organizationId, onMembershipChanged }: { organizationId: string; onMembershipChanged: () => void }) {
+export function OrganizationMembersTab({ organizationId, onMembershipChanged }: { organizationId: string; onMembershipChanged: () => void }) {
   const { t } = useTranslation();
   const { message } = App.useApp();
   const { accessToken } = useAuth();
   const [members, setMembers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   function loadMembers() {
@@ -45,8 +45,8 @@ export function OrganizationMembersPanel({ organizationId, onMembershipChanged }
   return (
     <div>
       <Space style={{ marginBottom: 12 }}>
-        <Button type="primary" size="small" onClick={() => setAddModalOpen(true)}>
-          {t('admin.organizations.addMember.button')}
+        <Button type="primary" size="small" onClick={() => setInviteModalOpen(true)}>
+          {t('admin.organizations.invite.button')}
         </Button>
       </Space>
       <Table
@@ -76,16 +76,12 @@ export function OrganizationMembersPanel({ organizationId, onMembershipChanged }
           },
         ]}
       />
-      <AddOrganizationMemberModal
-        open={addModalOpen}
+      <InviteOrganizationMemberModal
+        open={inviteModalOpen}
         organizationId={organizationId}
         existingMemberIds={new Set(members.map((m) => m.id))}
-        onClose={() => setAddModalOpen(false)}
-        onAdded={() => {
-          setAddModalOpen(false);
-          loadMembers();
-          onMembershipChanged();
-        }}
+        onClose={() => setInviteModalOpen(false)}
+        onInvited={() => setInviteModalOpen(false)}
       />
     </div>
   );

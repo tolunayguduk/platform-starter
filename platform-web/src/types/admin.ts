@@ -26,6 +26,20 @@ export interface Organization {
   name: string;
   description: string | null;
   memberCount: number;
+  membershipRequiresApproval: boolean;
+}
+
+export type MembershipRequestType = 'INVITE' | 'JOIN_REQUEST';
+
+/** A pending (or resolved) invite/join-request row - see OrganizationMembershipRequestDto. */
+export interface OrganizationMembershipRequest {
+  id: number;
+  organizationId: string;
+  organizationName: string;
+  keycloakUserId: string;
+  username: string;
+  requestType: MembershipRequestType;
+  createdAt: string;
 }
 
 /** Whether the current user can reach the admin panel at all, and how far - see

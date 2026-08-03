@@ -142,7 +142,9 @@ export function UsersTable({ selectedUserId, onSelectUser }: UsersTableProps) {
           onChange: setSelectedRowKeys,
           getCheckboxProps: (record) => ({ disabled: record.username === currentUser?.username }),
         }}
-        expandable={{ expandedRowRender: (record) => <AuditEventsView userId={record.id} /> }}
+        expandable={
+          scope?.platformScoped ? { expandedRowRender: (record) => <AuditEventsView userId={record.id} /> } : undefined
+        }
         onRow={(record) => ({
           onClick: () => onSelectUser(record),
           style: { cursor: 'pointer', backgroundColor: record.id === selectedUserId ? 'rgba(22, 119, 255, 0.08)' : undefined },

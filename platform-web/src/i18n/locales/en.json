@@ -26,6 +26,8 @@
     "confirmPassword": "Confirm Password",
     "createOrganization": "I want to create an organization",
     "organizationName": "Organization Name",
+    "joiningOrganization": "You're joining: {{name}}",
+    "joiningOrganizationError": "This invite link isn't valid - the organization couldn't be found.",
     "termsAccepted": "I accept the terms of service",
     "submit": "Sign Up",
     "errorFailed": "Registration failed.",
@@ -40,7 +42,15 @@
     "actions": "Actions",
     "listReports": "List Reports",
     "approveReport": "Approve Report",
-    "refund": "Issue Refund"
+    "refund": "Issue Refund",
+    "invites": {
+      "title": "Pending Organization Invites",
+      "item": "You've been invited to join {{organization}}.",
+      "accept": "Accept",
+      "decline": "Decline",
+      "accepted": "You've joined {{organization}}.",
+      "error": "Failed to update the invite."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -74,7 +84,14 @@
     "confirmNewPassword": "Confirm New Password",
     "changePassword": "Update Password",
     "passwordSuccess": "Password updated successfully.",
-    "passwordError": "Failed to update password."
+    "passwordError": "Failed to update password.",
+    "organizationSection": "Join an Organization",
+    "organizationSectionHint": "Enter an organization's invite link id or code to request to join it. Depending on the organization's settings, you may join immediately or need the manager's approval.",
+    "organizationIdPlaceholder": "Organization id",
+    "organizationJoinButton": "Request to Join",
+    "organizationJoined": "You've joined the organization.",
+    "organizationJoinPending": "Join request sent - pending the manager's approval.",
+    "organizationJoinError": "Failed to send the join request."
   },
   "settings": {
     "title": "Settings",
@@ -231,19 +248,49 @@
         "success": "Organization created.",
         "error": "Failed to create organization."
       },
-      "addMember": {
-        "button": "Add Member",
-        "title": "Add a member",
+      "tabs": {
+        "members": "Members",
+        "pendingRequests": "Pending Requests",
+        "settings": "Settings"
+      },
+      "invite": {
+        "button": "Invite Member",
+        "title": "Invite a member",
         "placeholder": "Exact username or email",
         "searchButton": "Search",
         "notFound": "No user matches that username or email.",
         "alreadyMember": "Already a member",
-        "confirmButton": "Add to organization"
+        "confirmButton": "Send invite"
       },
-      "memberAdded": "Member added.",
+      "inviteSent": "Invite sent - pending the user's acceptance.",
       "memberRemoved": "Member removed.",
       "confirmRemoveMember": "Remove this member from the organization?",
-      "removeMemberAction": "Remove"
+      "removeMemberAction": "Remove",
+      "pendingRequests": {
+        "empty": "No pending join requests.",
+        "column": {
+          "requestedAt": "Requested"
+        },
+        "approve": "Approve",
+        "reject": "Reject",
+        "confirmReject": "Reject this join request?",
+        "approved": "Join request approved.",
+        "rejected": "Join request rejected.",
+        "error": "Failed to update the join request."
+      },
+      "settings": {
+        "requiresApprovalLabel": "Require manager approval to join",
+        "requiresApprovalHint": "When on, anyone using the invite link below is only added after a manager approves their request. When off, they join immediately.",
+        "updated": "Setting updated.",
+        "updateError": "Failed to update setting.",
+        "inviteLinkLabel": "Invite link",
+        "inviteLinkHint": "This link never expires. Anyone who registers through it requests to join this organization, subject to the setting above.",
+        "copyLink": "Copy",
+        "linkCopied": "Link copied to clipboard."
+      }
+    },
+    "scopeNotice": {
+      "organization": "You're viewing data for your own organization only. A platform administrator sees every organization."
     },
     "registrationsTitle": "User Registrations",
     "registrationsTotalFor": "Total registrations in the last {{period}}",
@@ -318,6 +365,7 @@
       "selfRoleHint": "You cannot remove your own ADMIN role.",
       "roleDisabledLabel": "{{role}} (disabled)",
       "rolePlatformOnlyLabel": "{{role}} (platform admin only)",
+      "identityPlatformOnly": "Username and email can only be changed by the user themselves, or a platform administrator.",
       "success": "User updated.",
       "error": "Failed to update user."
     },

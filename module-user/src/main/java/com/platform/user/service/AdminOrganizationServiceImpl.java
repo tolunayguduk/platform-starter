@@ -5,12 +5,18 @@ import com.platform.security.integration.keycloak.KeycloakAdminClient;
 import com.platform.security.integration.keycloak.model.KeycloakGroup;
 import com.platform.security.integration.keycloak.model.KeycloakUserId;
 import com.platform.security.integration.keycloak.model.KeycloakUserSummary;
+import com.platform.user.constant.MembershipRequestStatus;
+import com.platform.user.constant.MembershipRequestType;
+import com.platform.user.entity.OrganizationMembershipRequest;
 import com.platform.user.entity.UserProfile;
+import com.platform.user.repository.OrganizationMembershipRequestRepository;
 import com.platform.user.repository.UserProfileRepository;
 import com.platform.user.service.model.AdminAccessScope;
 import com.platform.user.service.model.AdminUserResult;
+import com.platform.user.service.model.OrganizationMembershipRequestResult;
 import com.platform.user.service.model.OrganizationResult;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -26,12 +32,15 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     private final KeycloakAdminClient keycloakAdminClient;
     private final UserProfileRepository userProfileRepository;
     private final AdminAccessScopeService adminAccessScopeService;
+    private final OrganizationMembershipRequestRepository membershipRequestRepository;
 
     public AdminOrganizationServiceImpl(KeycloakAdminClient keycloakAdminClient, UserProfileRepository userProfileRepository,
-                                         AdminAccessScopeService adminAccessScopeService) {
+                                         AdminAccessScopeService adminAccessScopeService,
+                                         OrganizationMembershipRequestRepository membershipRequestRepository) {
         this.keycloakAdminClient = keycloakAdminClient;
         this.userProfileRepository = userProfileRepository;
         this.adminAccessScopeService = adminAccessScopeService;
+        this.membershipRequestRepository = membershipRequestRepository;
     }
 
     @Override
@@ -41,7 +50,8 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
                 ? keycloakAdminClient.listGroups()
                 : keycloakAdminClient.getUserGroups(callerKeycloakUserId);
         return groups.stream()
-                .map(g -> new OrganizationResult(g.id(), g.name(), g.description(), keycloakAdminClient.getGroupMembers(g.id()).size()))
+                .map(g -> new OrganizationResult(g.id(), g.name(), g.description(),
+                        keycloakAdminClient.getGroupMembers(g.id()).size(), g.membershipRequiresApproval()))
                 .toList();
     }
 
@@ -52,13 +62,19 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
             throw new BusinessException("COMMON-4001", "error.profile.missing_fields", "Organization name required");
         }
         KeycloakGroup group = keycloakAdminClient.createGroup(name.trim());
-        return new OrganizationResult(group.id(), group.name(), group.description(), 0);
+        return new OrganizationResult(group.id(), group.name(), group.description(), 0, group.membershipRequiresApproval());
     }
 
     @Override
     public void updateOrganizationDescription(String organizationId, String description, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
         keycloakAdminClient.updateGroupDescription(organizationId, description);
+    }
+
+    @Override
+    public void updateMembershipApprovalSetting(String organizationId, boolean requiresApproval, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        keycloakAdminClient.updateGroupMembershipApproval(organizationId, requiresApproval);
     }
 
     @Override
@@ -104,15 +120,90 @@ public class AdminOrganizationServiceImpl implements AdminOrganizationService {
     }
 
     @Override
-    public void addMember(String organizationId, String keycloakUserId, String callerKeycloakUserId) {
+    @Transactional
+    public void inviteMember(String organizationId, String keycloakUserId, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
-        keycloakAdminClient.addUserToGroup(keycloakUserId, organizationId);
+        Set<String> memberIds = keycloakAdminClient.getGroupMembers(organizationId).stream()
+                .map(KeycloakUserId::id)
+                .collect(Collectors.toSet());
+        if (memberIds.contains(keycloakUserId)) {
+            throw new BusinessException("ADMIN-4009", "error.admin.already_member",
+                    "User is already a member of this organization");
+        }
+        membershipRequestRepository.findByOrganizationIdAndKeycloakUserIdAndRequestTypeAndStatus(
+                organizationId, keycloakUserId, MembershipRequestType.INVITE, MembershipRequestStatus.PENDING)
+                .ifPresent(existing -> {
+                    throw new BusinessException("ADMIN-4010", "error.admin.invite_already_pending",
+                            "An invite is already pending for this user");
+                });
+
+        OrganizationMembershipRequest request = new OrganizationMembershipRequest();
+        request.setOrganizationId(organizationId);
+        request.setKeycloakUserId(keycloakUserId);
+        request.setRequestType(MembershipRequestType.INVITE);
+        request.setInitiatedByKeycloakUserId(callerKeycloakUserId);
+        membershipRequestRepository.save(request);
     }
 
     @Override
     public void removeMember(String organizationId, String keycloakUserId, String callerKeycloakUserId) {
         assertCanAccessOrganization(callerKeycloakUserId, organizationId);
         keycloakAdminClient.removeUserFromGroup(keycloakUserId, organizationId);
+    }
+
+    @Override
+    public List<OrganizationMembershipRequestResult> listPendingJoinRequests(String organizationId, String callerKeycloakUserId) {
+        assertCanAccessOrganization(callerKeycloakUserId, organizationId);
+        String organizationName = resolveOrganizationName(organizationId);
+        Map<String, String> usernamesByUserId = keycloakAdminClient.listUsers().stream()
+                .collect(Collectors.toMap(KeycloakUserSummary::id, KeycloakUserSummary::username));
+
+        return membershipRequestRepository
+                .findByOrganizationIdAndRequestTypeAndStatus(organizationId, MembershipRequestType.JOIN_REQUEST, MembershipRequestStatus.PENDING)
+                .stream()
+                .map(r -> new OrganizationMembershipRequestResult(
+                        r.getId(), r.getOrganizationId(), organizationName,
+                        r.getKeycloakUserId(), usernamesByUserId.getOrDefault(r.getKeycloakUserId(), r.getKeycloakUserId()),
+                        r.getRequestType(), r.getCreatedAt()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void approveJoinRequest(Long requestId, String callerKeycloakUserId) {
+        OrganizationMembershipRequest request = loadPendingJoinRequest(requestId);
+        assertCanAccessOrganization(callerKeycloakUserId, request.getOrganizationId());
+        request.setStatus(MembershipRequestStatus.APPROVED);
+        request.setResolvedAt(Instant.now());
+        membershipRequestRepository.save(request);
+        keycloakAdminClient.addUserToGroup(request.getKeycloakUserId(), request.getOrganizationId());
+    }
+
+    @Override
+    @Transactional
+    public void rejectJoinRequest(Long requestId, String callerKeycloakUserId) {
+        OrganizationMembershipRequest request = loadPendingJoinRequest(requestId);
+        assertCanAccessOrganization(callerKeycloakUserId, request.getOrganizationId());
+        request.setStatus(MembershipRequestStatus.REJECTED);
+        request.setResolvedAt(Instant.now());
+        membershipRequestRepository.save(request);
+    }
+
+    private OrganizationMembershipRequest loadPendingJoinRequest(Long requestId) {
+        OrganizationMembershipRequest request = membershipRequestRepository.findById(requestId)
+                .orElseThrow(() -> new BusinessException("ADMIN-4040", "error.admin.row_not_found", "No such request: " + requestId));
+        if (request.getRequestType() != MembershipRequestType.JOIN_REQUEST || request.getStatus() != MembershipRequestStatus.PENDING) {
+            throw new BusinessException("ADMIN-4011", "error.admin.request_not_pending", "This request is not a pending join request");
+        }
+        return request;
+    }
+
+    private String resolveOrganizationName(String organizationId) {
+        return keycloakAdminClient.listGroups().stream()
+                .filter(g -> g.id().equals(organizationId))
+                .map(KeycloakGroup::name)
+                .findFirst()
+                .orElse(organizationId);
     }
 
     private AdminUserResult toResult(KeycloakUserSummary kcUser, Set<String> roles) {

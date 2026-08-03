@@ -68,21 +68,27 @@ public interface AdminUserService {
     void updateUserStatus(String keycloakUserId, boolean enabled, String currentAdminKeycloakUserId);
 
     /** Admin-panel edit of username/email - still routed straight through to Keycloak,
-     * never persisted locally, same as everything else in this service. */
+     * never persisted locally, same as everything else in this service. PLATFORM-scope only: a
+     * manager manages their organization's membership and roles, never a user's identity - the
+     * user themselves can always change these via their own self-service profile instead. */
     void updateUserIdentity(UpdateUserIdentityCommand command);
 
     /** Audit trail for this user's identity/role changes, sourced from Keycloak's own admin
-     * event log rather than any local table. */
-    List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId);
+     * event log rather than any local table - PLATFORM-scope only. A manager manages their
+     * organization's membership, but never gets to see the change history behind it. */
+    List<AdminUserAuditEventResult> getUserAuditEvents(String keycloakUserId, String callerKeycloakUserId);
 
-    /** Realm-wide recent admin activity (not scoped to one user) - backs the admin panel's
-     * "Recent Activity" feed, same Keycloak admin event log as getUserAuditEvents. */
-    List<AdminUserAuditEventResult> getRecentActivity(int limit);
+    /** Recent admin activity backing the admin panel's "Recent Activity" feed, same Keycloak admin
+     * event log as getUserAuditEvents - unrestricted for a PLATFORM-scope caller, filtered to
+     * events about the caller's own organization's users otherwise. */
+    List<AdminUserAuditEventResult> getRecentActivity(int limit, String callerKeycloakUserId);
 
     /** Same computation UiPermissionsService already does for "me" (see UiPermissionsController),
      * run for this user's current roles instead - lets an admin see exactly which UI functions
      * this user's roles let them see/use, without duplicating the ENABLED/DISABLED/HIDDEN logic. */
     Map<String, String> getUserUiPermissions(String keycloakUserId);
 
-    List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range);
+    /** Registration counts/trend - unrestricted for a PLATFORM-scope caller, confined to the
+     * caller's own organization(s) otherwise, same scoping rule as listUsers. */
+    List<RegistrationStatsPointResult> getRegistrationStats(StatsRange range, String callerKeycloakUserId);
 }

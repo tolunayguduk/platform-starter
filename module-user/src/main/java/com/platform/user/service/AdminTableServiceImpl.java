@@ -112,9 +112,12 @@ public class AdminTableServiceImpl implements AdminTableService {
     }
 
     /** PERMISSION/ROLE_PERMISSION are the role/function definitions themselves - organization
-     * admins manage user↔role assignment and their own organization's membership, never these. */
+     * admins manage user↔role assignment and their own organization's membership, never these.
+     * USER_PROFILE (name, birth date, avatar, locale) is a user's own identity/profile info - an
+     * organization admin manages membership and roles, never edits this on someone else's behalf;
+     * only the user themselves (self-service) or a platform-scope admin can. */
     private static final Set<AdminTableKey> PLATFORM_SCOPE_ONLY_KEYS =
-            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION);
+            Set.of(AdminTableKey.PERMISSION, AdminTableKey.ROLE_PERMISSION, AdminTableKey.USER_PROFILE);
 
     private void requirePlatformScopeIfRestricted(AdminTableKey key, String callerKeycloakUserId) {
         if (PLATFORM_SCOPE_ONLY_KEYS.contains(key) && !adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
@@ -140,7 +143,11 @@ public class AdminTableServiceImpl implements AdminTableService {
     }
 
     @Override
-    public AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue) {
+    public AdminAuditRowsResult getAuditRows(AdminTableKey key, String primaryKeyValue, String callerKeycloakUserId) {
+        if (!adminAccessScopeService.resolve(callerKeycloakUserId).platformScoped()) {
+            throw new BusinessException("ADMIN-4008", "error.admin.platform_scope_required",
+                    "Only a platform-scope admin can view audit history");
+        }
         TableMeta meta = REGISTRY.get(key);
         if (meta.auditTableName() == null) {
             throw new BusinessException("ADMIN-4001", "error.admin.no_audit_table",
