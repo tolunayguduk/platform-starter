@@ -1,14 +1,32 @@
 .wrapper {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  padding: 0 24px;
-  min-width: 0;
+  width: 220px;
 }
 
 .search {
   width: 100%;
-  max-width: 360px;
+}
+
+.input {
+  color: var(--nav-text);
+  border-radius: 6px;
+}
+
+/* antd's borderless variant only removes the resting border - it still applies its own default
+   blue focus ring regardless of variant. Swap it for one derived from the header's own text
+   color so it stays legible against whatever theme color is active, instead of a fixed blue that
+   may clash. */
+.input:global(.ant-input-affix-wrapper-focused) {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--nav-text) 35%, transparent) !important;
+}
+
+.input input::placeholder {
+  color: var(--nav-text);
+  opacity: 0.65;
+}
+
+.icon {
+  color: var(--nav-text);
+  opacity: 0.85;
 }
 
 .resultRow {

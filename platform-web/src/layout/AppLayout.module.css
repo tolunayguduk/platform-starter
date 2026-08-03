@@ -15,6 +15,12 @@
   text-decoration: none;
 }
 
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .appNameText {
   font-size: 16px;
   color: var(--nav-text);

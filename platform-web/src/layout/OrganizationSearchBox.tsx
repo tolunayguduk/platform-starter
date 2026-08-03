@@ -54,7 +54,14 @@ export function OrganizationSearchBox() {
           ),
         }))}
       >
-        <Input placeholder={t('nav.searchOrganizations')} prefix={<SearchOutlined />} allowClear />
+        <Input
+          className={styles.input}
+          size="small"
+          variant="borderless"
+          placeholder={t('nav.searchOrganizations')}
+          prefix={<SearchOutlined className={styles.icon} />}
+          allowClear
+        />
       </AutoComplete>
     </div>
   );

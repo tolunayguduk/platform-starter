@@ -26,8 +26,10 @@ export function AppLayout() {
             {t('nav.appName')}
           </Typography.Text>
         </Link>
-        <OrganizationSearchBox />
-        <UserMenu textColor={navText} overlayColor={navOverlay} />
+        <div className={styles.rightGroup}>
+          <OrganizationSearchBox />
+          <UserMenu textColor={navText} overlayColor={navOverlay} />
+        </div>
       </Header>
       <Content className={styles.content} style={contentVars}>
         <div className={styles.contentInner}>
